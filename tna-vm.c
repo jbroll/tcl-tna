@@ -4,7 +4,7 @@
 #include <math.h>
 
 #include "generic.h"
-#include  "tna-vm.h"
+#include   "tna-vm.h"
 
 #define R1 *addr1
 #define R2 *addr2
@@ -127,16 +127,6 @@ TYPES_INT(INSTRUCTIONS_XXX)
 TYPES_FLT(INSTRUCTIONS_XXX)
 TYPES_TWO(INSTRUCTIONS_CAST)
 
-// Name all the opcodes in an enum
-//
-enum InstructionOp {
-    INSTR_NOP = 0
-    TYPES_INT(ENUMS_INT)
-    TYPES_FLT(ENUMS_FLT)
-    TYPES_INT(ENUMS_XXX)
-    TYPES_FLT(ENUMS_XXX)
-    TYPES_TWO(ENUMS_CAST)
-};
 
 // Place all the opcode functions in a table with a name for disassembly
 //
@@ -147,6 +137,7 @@ OpTable OpCodes[] = {
     TYPES_INT(OPCODES_XXX)
     TYPES_FLT(OPCODES_XXX)
     TYPES_TWO(OPCODES_CAST)
+    , { NULL, "END" }
 };
 
 

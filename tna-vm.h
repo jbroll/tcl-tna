@@ -4,7 +4,6 @@
 #define RLEN 1024
 #define NDIM 5
 
-
 typedef struct _Axis {
     long	dims;		/* dimensions of the data	*/
     long	star;		/* slice start			*/
@@ -80,3 +79,14 @@ typedef struct _OpTable {
 #define ENUMS_CAST(type1, type2)\
     , INSTR_##type1##_##type2
 
+// Name all the opcodes in an enum
+//
+enum InstructionOp {
+    INSTR_NOP = 0
+    TYPES_INT(ENUMS_INT)
+    TYPES_FLT(ENUMS_FLT)
+    TYPES_INT(ENUMS_XXX)
+    TYPES_FLT(ENUMS_XXX)
+    TYPES_TWO(ENUMS_CAST)
+    , INSTR_END
+};
