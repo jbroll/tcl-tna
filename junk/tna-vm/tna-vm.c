@@ -116,7 +116,7 @@
     , { array_xxx_##type	, "xxx_"   #type }
 
 #define OPCODES_CAST(type1, type2)			\
-    , { array_##type1##_##type2	, #type1 "_" #type2 }
+    , { array_##type1##_##type2	, #type1 "2" #type2 }
 
 
 // generate the opcode functions
@@ -140,77 +140,6 @@ OpTable OpCodes[] = {
     , { NULL, "END" }
 };
 
-
-void slice_off(Register *r, int d, int x) {
-    if ( !r->slice.ax[d].size ) { return; }
-
-    r->offs[d] = ((char *)r->offs[d+1])
-  		+ ((r->slice.ax[d].star+((x*r->slice.ax[d].incr)
-	        %   r->slice.ax[d].size))
-      		%   r->slice.ax[d].dims)
-  		*   r->slice.ax[d].step
-		*   r->slice.ax[d].type;
-}
-
-void slice_run(Instr *program, int ni, int *D, int dim, Register *R, int nregs) 
-{
-    	int rl;
-    	int x, X;
-	int nx;
-	Instr    *instr;
-
-    dim--;
-
-    nx = R[program[ni-1].r3].slice.ax[dim].size;
-
-    x = 0;
-    for ( X = 0; X < nx; ) {				// Run over the entire dimension
-	if ( dim ) {
-	    int i;
-
-	    D[dim] = X;
-	    for ( i = 0; i < nregs; i++ ) { slice_off(&R[i], dim, X); }
-
-	    slice_run(program, ni, D, dim, R, nregs);
-	    X++;
-	} else {
-	    int rl = Min(RLEN, nx - X);
-
-	    x = X;
-	    for ( instr = program; instr->opcode; instr++ ) {	// Execute the instructions one bank at a time
-		int left = rl;
-	        int bite = rl;
-		bite     = Min(rl, nx - x);
-
-		if ( R[instr->r1].slice.ax[dim].size ) { bite = Min(bite, R[instr->r1].slice.ax[dim].size); }
-		if ( R[instr->r2].slice.ax[dim].size ) { bite = Min(bite, R[instr->r2].slice.ax[dim].size); }
-		if ( R[instr->r3].slice.ax[dim].size ) { bite = Min(bite, R[instr->r3].slice.ax[dim].size); }
-
-
-		for ( ; left > 0; left -= bite ) {	// Run at most the length of the smallest slice
-		    D[0] = x;
-		    bite = Min(rl, nx - x);
-
-		    slice_off(&R[instr->r1], 0, x);
-		    slice_off(&R[instr->r2], 0, x);
-		    slice_off(&R[instr->r3], 0, x);
-
-
-		    OpCodes[instr->opcode].func(bite
-			    , &R[instr->r1]
-			    , &R[instr->r2]
-			    , &R[instr->r3]);
-
-		    x   += bite;
-		} 
-		x = X;
-	    }
-
-	    X += rl;
-	}
-    }
-}
-
 void slice_val(Register *r, void *value) 
 {
     	int i;
@@ -231,6 +160,92 @@ void slice_reg(Register *r, int type)
     r->slice.ax[0].dims = RLEN;
     r->slice.ax[0].step = 1;
     r->slice.ax[0].type = type;
+}
+
+void slice_off(Register *r, int d, int x) {
+    if ( r->slice.ax[d].size == -(d+1) ) {
+	switch ( r->slice.ax[d].type ) {		// Slice index access from a typed Value register.
+	    case TNA_TYPE_CHAR:		(*(char   *)r->offs) = x;	break;
+	    case TNA_TYPE_UCHAR:	(*(uchar  *)r->offs) = x;	break;
+	    case TNA_TYPE_SHORT: 	(*(short  *)r->offs) = x;	break;
+	    case TNA_TYPE_USHORT: 	(*(ushort *)r->offs) = x;	break;
+	    case TNA_TYPE_INT: 		(*(int    *)r->offs) = x;	break;
+	    case TNA_TYPE_UINT:		(*(uint   *)r->offs) = x;	break;
+	    case TNA_TYPE_LONG:		(*(long   *)r->offs) = x;	break;
+	    case TNA_TYPE_ULONG:	(*(ulong  *)r->offs) = x;	break;
+	    case TNA_TYPE_FLOAT: 	(*(float  *)r->offs) = x;	break;
+	    case TNA_TYPE_DOUBLE: 	(*(double *)r->offs) = x;	break;
+	}
+    }
+    if ( !r->slice.ax[d].size ) { return; }		// no need to adjust offset of a Value or temp register.
+
+    r->offs[d] = ((char *)r->offs[d+1])			// Adjust offset into Array type.
+  		+ ((r->slice.ax[d].star+((x*r->slice.ax[d].incr)
+	        %   r->slice.ax[d].size))
+      		%   r->slice.ax[d].dims)
+  		*   r->slice.ax[d].step
+		*   r->slice.ax[d].type;
+}
+
+void slice_run(Machine *machine, int dim)
+{
+	Instr  *program = machine->program;
+	int 	     ni = machine->ni;
+	Register     *R = machine->registers;
+	int       nregs = machine->nr;
+
+    	int rl;
+    	int x, X;
+	int X1;
+	Instr    *instr;
+
+    dim--;
+
+    x  = machine->X0[dim];
+    X1 = machine->X1[dim];
+    for ( X = 0; X < X1; ) {				// Run over the entire dimension
+	if ( dim ) {
+	    int i;
+
+	    for ( i = 0; i < nregs; i++ ) { slice_off(&R[i], dim, X); }
+
+	    slice_run(machine, dim);
+	    X++;
+	} else {
+	    int rl = Min(RLEN, X1 - X);
+
+	    x = X;
+	    for ( instr = program; instr->opcode; instr++ ) {	// Execute the instructions one bank at a time
+		int left = rl;
+	        int bite = rl;
+		bite     = Min(rl, X1 - x);
+
+		if ( R[instr->r1].slice.ax[dim].size ) { bite = Min(bite, R[instr->r1].slice.ax[dim].size); }
+		if ( R[instr->r2].slice.ax[dim].size ) { bite = Min(bite, R[instr->r2].slice.ax[dim].size); }
+		if ( R[instr->r3].slice.ax[dim].size ) { bite = Min(bite, R[instr->r3].slice.ax[dim].size); }
+
+
+		for ( ; left > 0; left -= bite ) {	// Run at most the length of the smallest slice
+		    bite = Min(rl, X1 - x);
+
+		    slice_off(&R[instr->r1], 0, x);
+		    slice_off(&R[instr->r2], 0, x);
+		    slice_off(&R[instr->r3], 0, x);
+
+
+		    OpCodes[instr->opcode].func(bite
+			    , &R[instr->r1]
+			    , &R[instr->r2]
+			    , &R[instr->r3]);
+
+		    x   += bite;
+		} 
+		x = X;
+	    }
+
+	    X += rl;
+	}
+    }
 }
 
 void print(double *data, int nx, int ny)  {

@@ -1,10 +1,7 @@
 
+tna:
+	critcl3.kit -force -pkg tna
 
-tnaplus:
-	critcl3.kit -force -pkg tnaplus
-
-tna-vm :
-	gcc  -O3 tna-vm.c  -o tna-vm
 
 
 # Install ActiveState python

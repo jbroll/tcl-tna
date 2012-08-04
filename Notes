@@ -1,0 +1,33 @@
+
+
+
+# Tcl Numeric Array assembler
+#
+# Opcodes of the TNA machine are written in 3 address notation.  The assignment arrow reminds
+# everyone what the argument order is.  Otherwise it is syntacic sugar.  The second argument
+# to unary operators is ignored.  
+#
+# Arguments to opcodes must be declaried registers.  Registers may be decalired to contain
+# arrays, values, constants or then can be temporaries.  The expected types of registers must
+# match thier instructions.
+#
+#  opcode is one of the recognized operators:
+#
+#	set
+#	add sub mul div mod neg
+#	equ neq gt lt gte lte
+#	and or band borr bxor shl shr
+#	exp pow sin cos tan atan
+#
+# Index registers:
+#
+# There are 5 special registers used to access the current slice index.  They are
+# named X, Y, Z, U, and V.  The X register may only be used with the special xxx instruction
+# to copy the X index vector to a temporary.  The other index registers are scaler values and
+# may be used as any other scalers are.
+#
+# 
+
+
+
+

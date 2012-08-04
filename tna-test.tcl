@@ -1,102 +1,275 @@
-#!/home/john/bin/tclkit8.6
+#!/usr/bin/env tclkit8.6
 #
- if { 0 } {
-  TNA is a class to create and manipulate binary blocks of numbers of up to
-  5 dimensions.  The dimensions are named x, y, z, u, v.  The axes are always
-  specified in this order, in both creaton commands and indicies.  These data
-  types are supported:
 
-	byte, short, ushort, int, uint, long, float, double
+lappend auto_path lib
 
-  Example creation commands:
+package require tna
 
-    tna create a float 3	; # Create a vector of  3 floating point elements
-    tna create b float 3 4	; # Create a matrix of 4 3 vectors.
+source expression.tcl
 
-    puts [b list]
-    {0.0 0.0 0.0} {0.0 0.0 0.0} {0.0 0.0 0.0} {0.0 0.0 0.0}
+oo::class create tna::array {
+    variable type dims data
+    accessor type dims data
+
+    constructor { Type args } {
+	set type $Type
+	set dims $args
+
+	set bytes 1
+	set data [::tna::malloc_$type [red x $args { set bytes [::expr $bytes*$x] }]]
+    }
+}
+oo::class create tna::value {
+    variable type dims data value
+    accessor type dims data value
+
+    constructor { Type args } {
+	set type $Type
+	set dims { 0 0 0 0 0 }
+
+	set value [lindex $args 0]
+	set data  [tna::malloc_$type 1]
+    }
+}
+
+namespace eval tna {
+    set text {}
+
+    proc xindx { dims indx } {			  # Parse the slice syntax into a list.
+	foreach d $dims x [split $indx ,] {
+	    if { $d eq {} } { break }
+
+	    set indx [split $x :]
+
+	    if { [llength $indx] == 1 && $x != "*" } {
+		if { $x < 0 } { set x [::expr $d+$x] }
+		set s $x
+		set e $x
+		set i  1
+	    } else {
+		lassign $indx s e i
 
 
-  There are 3 exported methods:
+		if { $s eq {} || $s eq "*" } { set s  0 	      }
+		if { $e eq {}              } { set e [::expr $d-1]  }
+		if { $i eq {}              } { set i  1 	      }
 
-    set index expression
+		if { $s < 0 } { set s [::expr $d+$s] }
+		if { $e < 0 } { set e [::expr $d+$e] }
+	    }
 
-	For each element of the TNA instance indexed by the index, evaluate
-	expression and assign the result to that element.
+	    lappend list [list $s $e $i]
+	}
 
-    list
+	return $list
+    }
 
-	return the data in list format.
+    proc lookup { name regName typName objName datName dimName } {
+	variable regs
 
-    data
+	upvar $regName reg
+	upvar $typName typ
+	upvar $objName obj
+	upvar $datName dat
+	upvar $dimName dim
 
-	return the data as a byte array object.
+	if { ![info exists regs($name)] } {
+	    register $name $name
+	}
+	lassign $regs($name) reg typ obj dat dim
+    }
 
+    proc tempreg { type { value {} } } {
+	variable regs
+	variable nreg
 
-  TNA index syntax
-
-  Indicies appear in two places.  As the second argument to the "set" method and as
-  selectors on TNA instances mentioned in the evaluated expression.  As arguments to
-  set, they select elements of the instance to be set.  Indicies may be a single
-  constant, a range of the form "start:end", or the single character "*".  In a range
-  eigher or both of the start and end values may be omitted.  The "*" form is an alias
-  for all values of an axis and is the same as ":".  Negative values index in from the
-  end.  Indicies for instances with 2 of more dimensions are separated by commas.
-
-  Example set commands and expressons:
-
-     a set * 1		; # set all elements to 1
-     a set 1 14		; # set element a(1) to 14
-
-     b set *,* 1	; # set all elements to 1
+	set reg   $nreg
+	set name @$nreg
+	set data $value
 
 
-  TNA set expressions syntax
+	set regs($name) [list $nreg $type $name $data * {}]
+	incr nreg
 
-  The expresson passed to "set" is evaluated by Tcl's internal "expr" command in the 
-  current context.  Within the expression the slice position is available in the local
-  varaibles $x, $y, $z, $u, and $v.  NB: The slice position is not the same as the element
-  index in the underlying instance.  In addition slices of other TNA instances may be
-  references by prefixing thier names with "%".
+	return $reg
+    }
+    proc register { name value { type {} } } {
+	variable nreg
+	variable regs
 
-  When indicies are used as selectors in evaluated set expressions the index may also
-  contain slice position values and arbitrary expressions.  Slice position values are
-  integers designated by the axis names (x, y, z, u, v) and indicate the current position
-  in the slice being set.
- }
+	if { [info command $name] ne {} } {
+	    set data [$name data]
+	    set type [$name type]
+	    set dims [$name dims]
+	} elseif { [string is int    $value] } {
+	    set type int
+	    set data $value
+	    set dims {}
+	} elseif { [string is double $value] } {
+	    set type double
+	    set data $value
+	    set dims {}
+	} else {
+	    error "unknown identifier : $name"
+	}
 
- lappend auto_path lib
+	set regs($name) [list $nreg $type $name $data $dims {}]
+	incr nreg
+    }
 
- package require tnaplus
 
- proc = { title test result } {
-    if { $test ne $result } { puts "fail: $title\n$test\n!=\n$result" }
- }
+    proc promote { c regc typec args } {
+	variable text
 
- tna create a short 3 	; = "Simple vector" 	[a list]  {0 0 0}
- tna create b short 3 3	; = "3x3 matrix"	[b list] {{0 0 0} {0 0 0} {0 0 0}}
+	upvar $c C
+	upvar $regc regC
+	upvar $typec typeC
 
- a set *      \$x	; = "Vector 0 1 2" 	[a list]  {0 1 2}
- a set *    {$x+1}	; = "Vector 1 2 3" 	[a list]  {1 2 3}
- b set *,1     %a	; = "Full slice" 	[b list] {{0 0 0} {1 2 3} {0 0 0}}
- b set 0:1,*   %a	; = "Short slice"	[b list] {{1 2 0} {1 2 3} {1 2 0}}
- b set *,*     %a	; = "Wrap slice"	[b list] {{1 2 3} {1 2 3} {1 2 3}}
- b set *,*   %a(0:1)	; = "Wrap value"	[b list] {{1 2 1} {1 2 1} {1 2 1}}
+	set typeC none
+	foreach { reg type Name } $args {
+	    set typeC [lindex $tna::Types [::expr max([lsearch $::tna::Types $typeC], [lsearch $::tna::Types $type])]]
+	}
 
- set K 5
- b set *,0     {$K}	; = "Use a local" 	[b list] {{5 5 5} {1 2 1} {1 2 1}}
- b set -1,2	4	; = "minus 1 index" 	[b list] {{5 5 5} {1 2 1} {1 2 4}}
+	foreach { reg type Name } $args {
+	    upvar $Name N
 
- b set *,*  {$y+$x}	; = "slice indicies"	[b list] {{0 1 2} {1 2 3} {2 3 4}}
+	    if { $type ne $typeC } {
+		set N [tempreg $typeC]
+		lappend text [list tna_opcode_${type}_${typeC} $reg 0 $N] 
+	    } else {
+		set N $reg
+	    }
+	}
 
- # Go big...
- #
- tna create A double 1024 1024
- tna create B double 1024 1024
- tna create C double 1024 1024
+	set regC [tempreg $typeC]
+	set C @$regC
+    }
 
-puts [time {A set     *,* { $x + $y }}]
-puts [time {B set     *,* { 2 }}]
-puts [time {C set     *,* { pow(%A, 2) + pow(%B, 2) + 2*%A*%B }}]
-# 652072 microseconds per iteration
+    proc indx  { op args } {
+	puts "$op $args"
+    }
+
+    proc assign { op a b } {
+	variable regs
+	variable text
+	
+	lookup $a regA typeA - dataA dimsA
+	lookup $b regB typeB - dataB dimsB
+
+	# If the types are the same and the target is a tmp register,
+	# change the target of the previous instr
+	#
+	if { $typeA eq $typeB && [info exists regs(@[lindex $text end end])] } {
+	    lset text end end $regA						
+	} else {
+	    lappend text [list tna_opcode_${typeB}_$typeA $regB 0 $regA]
+	}
+
+	return $a
+    }
+
+
+    interp alias {} ::tna::addasn {} ::tna::asnop
+    interp alias {} ::tna::subasn {} ::tna::asnop
+    interp alias {} ::tna::mulasn {} ::tna::asnop
+    interp alias {} ::tna::divasn {} ::tna::asnop
+    interp alias {} ::tna::modasn {} ::tna::asnop
+    interp alias {} ::tna::bndasn {} ::tna::asnop
+    interp alias {} ::tna::bxrasn {} ::tna::asnop
+    interp alias {} ::tna::borasn {} ::tna::asnop
+    interp alias {} ::tna::shrasn {} ::tna::asnop
+    interp alias {} ::tna::shlasn {} ::tna::asnop
+
+    proc asnop { op a b } {
+	assign $op $a [binop [string range $op  0 2] $a $b]
+    }
+
+    interp alias {} ::tna::add  {} ::tna::binop
+    interp alias {} ::tna::sub  {} ::tna::binop
+    interp alias {} ::tna::mul  {} ::tna::binop
+    interp alias {} ::tna::div  {} ::tna::binop
+    interp alias {} ::tna::shr  {} ::tna::binop
+    interp alias {} ::tna::shl  {} ::tna::binop
+    interp alias {} ::tna::gt   {} ::tna::binop 
+    interp alias {} ::tna::lt   {} ::tna::binop
+    interp alias {} ::tna::lte  {} ::tna::binop
+    interp alias {} ::tna::gte  {} ::tna::binop
+    interp alias {} ::tna::equ  {} ::tna::binop
+    interp alias {} ::tna::neq  {} ::tna::binop
+    interp alias {} ::tna::band {} ::tna::binop
+    interp alias {} ::tna::bxor {} ::tna::binop
+    interp alias {} ::tna::bor  {} ::tna::binop
+    interp alias {} ::tna::land {} ::tna::binop
+    interp alias {} ::tna::lor  {} ::tna::binop
+    interp alias {} ::tna::equ  {} ::tna::binop
+    interp alias {} ::tna::neq  {} ::tna::binop
+
+    proc binop { op a b } {
+	variable text
+
+	lookup $a regA typeA nameA dataA dimsA
+	lookup $b regB typeB nameB dataB dimsB
+
+	if { $dimsA eq {} && $dimsB eq {} } {		; # Try constant folding
+	    set c [::expr "\$dataA $::expression::opers($op) \$dataB"]
+
+	    lookup $c nameC - - - -
+
+	    return $c
+	} else {
+	    promote C regC typeC $regA $typeA A $regB $typeB B
+	    lappend text [list tna_opcode_${op}_$typeC $A $B $regC]
+
+	    return $C
+	}
+    }
+
+    proc compile { op args } { return [$op $op {*}$args] }
+
+    proc expr { expr } {
+	puts $expr
+	puts ""
+
+	variable regs
+	variable nreg  1
+	variable text {}
+
+	::array unset regs
+
+	expression::parse $expr [expression::prep-tokens $::expression::optable] $::expression::optable ::tna::compile
+	::tna::execute [::array get regs] $text
+    }
+
+    proc execute { regs text } {
+	variable OpcodesX
+
+	puts [join [map { name value } [lsort -real -index {1 0} -stride 2 $regs] { list [format %10s $name] {*}$value }] \n]
+	puts ""
+	puts [join $text \n]
+	puts ""
+
+
+	set code {}
+	foreach instr $text {
+	     lappend code [list $OpcodesX([lindex $instr 0]) {*}[lrange $instr 1 end]]
+	}
+	puts [join $code \n]
+	puts ""
+
+	set code {}
+	foreach instr $text {
+	     append code [binary format s* [list $OpcodesX([lindex $instr 0]) {*}[lrange $instr 1 end]]]
+	}
+
+	puts [string length $code]
+	binary scan $code s* disass
+	puts $disass
+    }
+}
+
+tna::array create A double 3 3 
+tna::array create B int    3 3
+tna::array create C double 3 3 
+
+tna::expr { C[1,1] = A -= B * (4 + 6.0) }
 

@@ -4,13 +4,25 @@
 #define RLEN 1024
 #define NDIM 5
 
+#define TNA_TYPE_CHAR 	1
+#define TNA_TYPE_UCHAR 	2
+#define TNA_TYPE_SHORT 	3
+#define TNA_TYPE_USHORT 4
+#define TNA_TYPE_INT 	5
+#define TNA_TYPE_UINT 	6
+#define TNA_TYPE_LONG 	7
+#define TNA_TYPE_ULONG 	8
+#define TNA_TYPE_FLOAT 	9
+#define TNA_TYPE_DOUBLE 10
+
+
 typedef struct _Axis {
-    long	dims;		/* dimensions of the data	*/
     long	star;		/* slice start			*/
-    long	incr;		/* increment			*/
     long	size;		/* slice size			*/
+    long	incr;		/* increment			*/
     long	step;		/* block size of the dimension	*/
     long	type;		/* byte size of data type	*/
+    long	dims;		/* dimension of the data	*/
 } Axis;
 
 typedef struct _Slice {		/* definition of the slice	*/
@@ -29,6 +41,16 @@ typedef struct _Instr {
     short	r2;
     short	r3;
 } Instr;
+
+typedef struct _Machine {
+    Instr *program;
+    int	   ni;
+    Register *registers;
+    int    nr;
+    int    X0[NDIM];
+    int    X1[NDIM];
+} Machine;
+
 
 typedef void OpFunc(int n, Register *r1, Register *r2, Register *r3);
 

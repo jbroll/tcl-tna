@@ -1,10 +1,12 @@
 
+typedef unsigned char  uchar;
 typedef unsigned short ushort;
 typedef unsigned int   uint;
 typedef unsigned long  ulong;
 
 #define TYPES_INT(FUNCTION)				\
     FUNCTION(char)					\
+    FUNCTION(uchar)					\
     FUNCTION(ushort)					\
     FUNCTION(short)					\
     FUNCTION(int)					\
@@ -18,6 +20,7 @@ typedef unsigned long  ulong;
 
 #define TYPES_TWO(FUNCTION)				\
     TYPES2TWO(FUNCTION, char)				\
+    TYPES2TWO(FUNCTION, uchar)				\
     TYPES2TWO(FUNCTION, ushort)				\
     TYPES2TWO(FUNCTION, short)				\
     TYPES2TWO(FUNCTION, int)				\
@@ -27,6 +30,7 @@ typedef unsigned long  ulong;
     
 #define TYPES2TWO(FUNCTION, type)			\
     FUNCTION(type, char)				\
+    FUNCTION(type, uchar)				\
     FUNCTION(type, ushort)				\
     FUNCTION(type, short)				\
     FUNCTION(type, int)					\

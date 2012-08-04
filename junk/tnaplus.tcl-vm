@@ -26,11 +26,6 @@ namespace eval tna {			  # This array defines the types avaialble in the package
 
     set  axes { x y z u v }		; # The names of the axis index variables
     set naxes [llength $axes]
-
-    foreach { type def } [array get Types] { 
-	lassign $def ctype xtype format 
-	critcl::cproc malloc_$type { long size } long "return malloc(size*sizeof($ctype));"
-    }
 }
 
 
@@ -79,8 +74,6 @@ critcl::cinit {
 	OpCodes[i].name;
     }
 } {}
-
-
 
 oo::class create tna {
     variable type dims data

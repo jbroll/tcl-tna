@@ -17,6 +17,8 @@ critcl::tsources tnaplus.tcl		; # This file is a tcl source file for the package
 critcl::cdefines TNA_* ::tna
 
 namespace eval tna {			  # This array defines the types avaialble in the package.
+    set ::tna::reglen 1024
+
     array set Types {
 	      byte { "unsigned char"    int     %d }
 	     short { short		int     %d }

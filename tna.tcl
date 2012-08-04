@@ -1,161 +1,312 @@
-proc K { x y } { set x }
-proc red { args } {
-    return [uplevel [subst {
-        set _[info frame] {}
-        foreach [lrange $args 0 end-1] { set     _[info frame] \[eval {[lindex $args end]}] }
-        set _[info frame]
-    }]]
+
+package provide tna 0.5
+
+critcl::tsources tna.tcl	 			; # This file is a tcl source file for the package.
+critcl::tsources tcloo.tcl template.tcl functional.tcl	; # Helpers
+critcl::cheaders tna.h 
+
+critcl::cflags -O3
+critcl::clibraries -lm
+
+source tcloo.tcl
+source template.tcl
+
+namespace eval tna {
+    set regsize 1024
+
+    # This array defines the types available in the package.
+    #
+    set Types {
+	      char {  char              int     %d }
+	     uchar { "unsigned char"    int     %d }
+	     short {  short		int     %d }
+	    ushort { "unsigned short"	int     %d }
+	       int {  int 		int     %d }
+	      uint { "unsigned int"	long    %u }
+	      long {  long		long   %ld }
+	     ulong { "unsigned long"	ulong  %lu }
+	     float {  float		double  %f }
+	    double {  double		double  %f }
+    }
+
+    set IntOnly { mod band bor bxor bnot shr shl }
+
+    set Opcodes {
+	mod	{ R3 = R1 %  R2; 	}
+	band	{ R3 = R1 &  R2; 	}
+	bor 	{ R3 = R1 |  R2; 	}
+	bxor	{ R3 = R1 ^  R2; 	}
+	bnot	{ R3 = ~R1;	 	}
+	shr	{ R3 = R1 >> R2; 	}
+	shl	{ R3 = R1 << R2; 	}
+
+	add	{ R3 = R1 + R2;		}
+	sub	{ R3 = R1 - R2;		}
+	mul 	{ R3 = R1 * R2;		}
+	div 	{ R3 = R1 / R2;		}
+	neg 	{ R3 = -(R1);		}
+	equ 	{ R3 = R1 == R2;	}
+	neq 	{ R3 = R1 != R2;	}
+	gt 	{ R3 = R1 > R2;		}
+	lt 	{ R3 = R1 < R2;		}
+	gte 	{ R3 = R1 >= R2;	}
+	lte 	{ R3 = R1 <= R2;	}
+	land	{ R3 = (int)R1 && (int)R2;	}
+	lor 	{ R3 = (int)R1 || (int)R2;	}
+	cos 	{ R3 =   cos(R1);	}
+	sin 	{ R3 =   sin(R1);	}
+	tan 	{ R3 =   tan(R1);	}
+	acos 	{ R3 =  acos(R1);	}
+	asin 	{ R3 =  asin(R1);	}
+	atan 	{ R3 =  atan(R1);	}
+	atan2	{ R3 = atan2(R1, R2);	}
+	exp	{ R3 =   exp(R1);	}
+	log 	{ R3 =   log(R1);	}
+	log10	{ R3 = log10(R1);	}
+	pow	{ R3 =   pow(R1, R2);	}
+	sqrt	{ R3 =  sqrt(R1);	}
+	ceil	{ R3 =  ceil(R1);	}
+	abs	{ R3 =   abs(R1);	}
+	floor	{ R3 = floor(R1);	}
+	xxx	{ R3 = (R1)++;		}
+    }
+
+    set  axes { x y z u v }		; # The names of the axis index variables
+    set naxes [llength $axes]
+
+
+    proc opcodes {} {
+	set opcodes {}
+
+	foreach { type def } $tna::Types {
+	    foreach { name code } $::tna::Opcodes {
+		set T $type
+
+		if { $name in $tna::IntOnly && $type in { float double } } { continue }
+		if { $name eq "xxx" } { set T int }
+
+		lappend opcodes $name $T $type $code
+	    }
+
+	    foreach { type2 def } $::tna::Types {
+		lappend opcodes $type $type $type2 { R3 = R1 }
+	    }
+	}
+
+	return $opcodes
+    }
+
+    critcl::ccode "#define RLEN $regsize"
+
+    set i 1
+    foreach { type def } $::tna::Types { 
+	lassign $def ctype xtype format 
+
+	# Create a proc to allocate memory, and return the sizeof each type
+	#
+	critcl::cproc malloc_$type { long size } long "return (long) malloc(size*sizeof($ctype));"
+	critcl::cproc sizeof_$type { long size } long "return sizeof($ctype);"
+
+	# Add typedefs for any that are not C primitive types
+	#
+	if { $type ne $ctype } { critcl::ccode "typedef $ctype $type;\n" }
+
+	# Make an array to look up the types enumerated value from tcl.
+	#
+	set ::tna::Type($type) $i
+
+	# For use in the body of slice_offs
+	#
+	critcl::ccode "#define TNA_TYPE_$type $i"
+	append TypeCases "case TNA_TYPE_$type:	(*($ctype   *)r->offs) = x;	break;\n"
+
+	incr i
+    }
+
+}
+
+critcl::ccode {
+    #include <stdlib.h>
+    #include <stdio.h>
+    #include <math.h>
+
+    #include "/Users/john/src/tna/tna.h"		/* The cheaders directive above didn't seem to take?	*/
+
+    #define R1 *addr1
+    #define R2 *addr2
+    #define R3 *addr3
+
+    #define INCR		\
+	if ( i1 ) { addr1++; }	\
+	if ( i2 ) { addr2++; }	\
+	if ( i3 ) { addr3++; }
+
+    #define INSTR(name, type1, type2, type3 , expr) 						\
+	void static name(int n, Register *r1, Register *r2, Register *r3) {			\
+	    type1	*addr1 = (type1 *)r1->offs[0];						\
+	    type2	*addr2 = (type2 *)r2->offs[0];						\
+	    type3	*addr3 = (type3 *)r3->offs[0];						\
+	    int	 i;										\
+												\
+	    int	i1 = r1->slice.ax[0].size;							\
+	    int	i2 = r2->slice.ax[0].size;							\
+	    int	i3 = r3->slice.ax[0].size;							\
+												\
+	    while ( n >= RLEN ) { for ( i = 0; i <  RLEN; i++ ) { expr; INCR } n -= RLEN; }	\
+	    while ( n >=    8 ) { for ( i = 0; i <     8; i++ ) { expr; INCR }  n -=   8; }	\
+												\
+	    while ( n ) { expr;   n--; INCR }							\
+	}
+}
+critcl::ccode [subst {
+    [: { name type type2 code } [tna::opcodes] {
+	    INSTR(tna_opcode_${name}_${type2}, $type, $type, $type2, $code)
+    }]
+
+    OpTable OpCodes\[] = {
+	{ NULL, "nop" }
+	[: { name type type2 code } [tna::opcodes] {	, { tna_opcode_${name}_${type2}, "tna_opcode_${name}_${type2}" }\n}]
+    };
+}]
+
+critcl::ccode [string map [list %TypeCases $::tna::TypeCases] {
+    void slice_off(Register *r, int d, int x) {
+	if ( r->slice.ax[d].size == -(d+1) ) {
+	    switch ( r->slice.ax[d].type ) {		// Slice index access from a typed Value register.
+		%TypeCases
+	    }
+	}
+	if ( !r->slice.ax[d].size ) { return; }		// no need to adjust offset of a Value or temp register.
+
+	r->offs[d] = ((char *)r->offs[d+1])		// Adjust offset into Array type.
+		    + ((r->slice.ax[d].star+((x*r->slice.ax[d].incr)
+		    %   r->slice.ax[d].size))
+		    %   r->slice.ax[d].dims)
+		    *   r->slice.ax[d].step
+		    *   r->slice.ax[d].type;
+    }
+}]
+
+critcl::ccode {
+    void slice_val(Register *r, void *value) 
+    {
+	    int i;
+
+	for ( i = 0; i < NDIM; i++ ) {
+	    r->offs[i] = value;
+	    r->slice.ax[i].size = 0;
+	}
+    }
+
+    void slice_reg(Register *r, int type)
+    {
+	slice_val(r, malloc(RLEN * 8));
+
+	r->slice.ax[0].star = 0;
+	r->slice.ax[0].incr = 1;
+	r->slice.ax[0].size = RLEN;
+	r->slice.ax[0].dims = RLEN;
+	r->slice.ax[0].step = 1;
+	r->slice.ax[0].type = type;
+    }
+
+
+    void slice_run(Machine *machine, int dim)
+    {
+	    Instruct *program = machine->program;
+	    int       ni = machine->ni;
+	    Register *R  = machine->registers;
+	    int       nr = machine->nr;
+
+	    int rl;
+	    int x, X;
+	    int X1;
+	    Instruct *instr;
+
+	dim--;
+
+	x  = machine->X0[dim];
+	X1 = machine->X1[dim];
+	for ( X = 0; X < X1; ) {				// Run over the entire dimension
+	    if ( dim ) {
+		int i;
+
+		for ( i = 0; i < nr; i++ ) { slice_off(&R[i], dim, X); }
+
+		slice_run(machine, dim);
+		X++;
+	    } else {
+		int rl = Min(RLEN, X1 - X);
+
+		x = X;
+		for ( instr = program; instr->opcode; instr++ ) {	// Execute the instructions one bank at a time
+		    int left = rl;
+		    int bite = rl;
+		    bite     = Min(rl, X1 - x);
+
+		    if ( R[instr->r1].slice.ax[dim].size ) { bite = Min(bite, R[instr->r1].slice.ax[dim].size); }
+		    if ( R[instr->r2].slice.ax[dim].size ) { bite = Min(bite, R[instr->r2].slice.ax[dim].size); }
+		    if ( R[instr->r3].slice.ax[dim].size ) { bite = Min(bite, R[instr->r3].slice.ax[dim].size); }
+
+
+		    for ( ; left > 0; left -= bite ) {	// Run at most the length of the smallest slice
+			bite = Min(rl, X1 - x);
+
+			slice_off(&R[instr->r1], 0, x);
+			slice_off(&R[instr->r2], 0, x);
+			slice_off(&R[instr->r3], 0, x);
+
+
+			OpCodes[instr->opcode].func(bite
+				, &R[instr->r1]
+				, &R[instr->r2]
+				, &R[instr->r3]);
+
+			x   += bite;
+		    } 
+		    x = X;
+		}
+
+		X += rl;
+	    }
+	}
+    }
+
+    void print(double *data, int nx, int ny)  {
+	    int i, j;
+
+	for ( j = 0; j < ny; j++ ) {
+	    for ( i = 0; i < ny; i++ ) {
+		printf(" %7.2f", data[j*nx+i]);
+	    }
+	    printf("\n");
+	}
+    }
+
 }
 
 namespace eval tna {
-    array set typeof {
-	     short { s 2  0 }      ushort { s 2 0xFFFF }      int { i 4  0 }      uint { i 4 0xFFFFFFFF }
-	swap-short { S 2  0 } swap-ushort { S 2 0xFFFF } swap-int { I 4  0 } swap-uint { I 4 0xFFFFFFFF }
-    }
+    critcl::cproc opcodesX { Tcl_Interp* ip } void {
+	int i;
+	Tcl_Obj *tnaOpcodes = Tcl_NewStringObj("::tna::OpcodesX", -1);
 
-    set axes { x y z t u v }
-    set tnaN 0
-}
+	for ( i = 0; i < sizeof(OpCodes)/sizeof(OpCodes[0]); i++ ) {
+	    Tcl_Obj *opname = Tcl_NewStringObj(OpCodes[i].name, -1);
+	    Tcl_Obj *opcode = Tcl_NewIntObj(i);
 
-proc tna::indx { dims indx } {
-    foreach d $dims x [split $indx ,] {
-	if { $d eq {} } { break }
-
-	set indx [split $x :]
-
-	if { [llength $indx] == 1 && $x != "*" } {
-	    set s $x
-	    set e $x
-	    set i 1
-	} else {
-	    lassign $indx s e i
-
-	    if { $s eq {} || $s eq "*" } { set s  0 	      }
-	    if { $e eq {}              } { set e [expr $d-1]  }
-	    if { $i eq {}              } { set i  1 	      }
+	    Tcl_ObjSetVar2(ip, tnaOpcodes, opname, opcode, TCL_GLOBAL_ONLY);
 	}
-
-	lappend list [list $s $e $i]
     }
 
-    return $list
+    critcl::cproc execute { Tcl_Interp* ip Tcl_Obj* text Tcl_Obj* registers } ok {
+
+
+	return TCL_OK;
+    }
 }
 
-proc tna::mkex { dims size slice axes } {
-    set width $size
 
-    foreach d $dims s $slice x $axes {
-	if { $d eq {} || $s eq {} || $x eq {} } { break }
 
-	lassign $s s e i
-	set n [expr $e-$s]
+if { [::critcl::compiled] } { ::tna::opcodesX }
 
-	lappend expr "($s+((\$$x*$i)%($n+1)))*$width"
-
-	set width [expr { $width * $d }]
-    }
-
-    return [join $expr " + "]
-}
-
-oo::class create tna {
-    variable type size dims data sign
-
-    constructor { Type args } {
-	set dims $args
-	lassign $::tna::typeof($Type) type size sign
-
-	set sum $size
-	set data [binary format x[red x $args { set sum [expr { $sum*$x }] }]]
-    }
-    method  slice-get { axes slice } {
-	set proc  ::tna::slice[incr ::tna::tnaN]-get
-
-	set EXPR [tna::mkex $dims $size [tna::indx $dims $slice] $axes]
-
-	if { $sign } {	set RETR "\[expr \$value & $sign]"
-	} else 	     { 	set RETR "\$value" }
-
-	proc   $proc $axes "binary scan $data x\[expr $EXPR]$type value;  return $RETR"
-	return $proc
-    }
-    method  slice-set { axes slice } {
-	set proc  ::tna::slice[incr ::tna::tnaN]-set
-
-	set EXPR [tna::mkex $dims $size [tna::indx $dims $slice] $axes]
-
-	proc   $proc "value $axes" "
-	    set offs \[expr $EXPR]
-	    set [my varname data] \[K \[string replace \$[my varname data] \$offs \[expr { \$offs+$size-1 }] \[binary format $type \$value]] \
-	        \[unset [my varname data]]]
-	"
-
-	return $proc
-    }
-    method  set { slice body } {
-	set expr "\t&&&&\n"
-
-	foreach indx [tna::indx $dims $slice] ax $::tna::axes {
-	    if { $indx eq {} } { break }
-
-	    lassign $indx s e i
-
-	    if { $s == $e } {
-		set expr "set $ax $s;\n$expr"
-	    } else {
-		set op <=
-		set z 0
-		set n [expr ($e-$s)/$i]
-		set d 1
-
-		if { $s >= $e } {
-		    set op >=
-		    set n  0
-		    set z [expr ($e-$s)/$i]
-		    set d -1
-		}
-
-		set expr "for { set $ax $z } { \$$ax $op $n } { incr $ax $d } {\n$expr }"
-	    }
-	    append axes   "$ax "
-	    append item "\$$ax "
-	}
-
-	set   map  { [ \\[ $ \\$ }
-	set   body [subst [regsub -all {%([a-zA-Z][0-9a-zA-Z]*)(\(([^)]+)\))?} 	\
-	    		[string map $map $body] 				\
-			 "\\\[\[\\1 slice-get \$axes [list \\3]] \$item]"]]
-
-	set   expr	\
-	    [string map [list &&&& "[my slice-set $axes $slice] \[expr {$body}] $item"] $expr]
-
-	eval $expr
-
-	foreach slice [info proc ::tna::slice*] { rename $slice {} }
-    }
-    method data {} { return $data }
-
-    method list-helper { dims offs } {
-	if { [llength $dims] == 1 } {
-	    binary scan $data x$offs$type[lindex $dims 0] row;  return $row
-	} else {
-	    set d [lindex $dims 0]
-
-	    for { set i 0 } { $i < $d } { incr i } {
-		lappend reply [my list-helper [lrange $dims 1 end] $offs]
-	    }
-	}
-
-	return $reply
-    }
-    method list {} { return [my list-helper [lreverse $dims] 0] }
-}
-
-tna create y short    3   1
-tna create x short    9   9
-
-y set 0:1 { $x+1 }
-x set *,* { %y }
-
-puts [join [x list] \n]
 
