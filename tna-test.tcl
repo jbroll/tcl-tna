@@ -36,7 +36,7 @@ namespace eval tna {
     set text {}
 
     proc xindx { dims indx } {			  # Parse the slice syntax into a list.
-	foreach d $dims x [split $indx ,] {
+	foreach d $dims x $indx {
 	    if { $d eq {} } { break }
 
 	    set indx [split $x :]
@@ -64,19 +64,20 @@ namespace eval tna {
 	return $list
     }
 
-    proc lookup { name regName typName objName datName dimName } {
+    proc lookup { name regName typName objName numName datName dimName } {
 	variable regs
 
 	upvar $regName reg
 	upvar $typName typ
 	upvar $objName obj
+	upvar $numName num
 	upvar $datName dat
 	upvar $dimName dim
 
 	if { ![info exists regs($name)] } {
 	    register $name $name
 	}
-	lassign $regs($name) reg typ obj dat dim
+	lassign $regs($name) reg typ obj num dat dim
     }
 
     proc tempreg { type { value {} } } {
@@ -94,31 +95,36 @@ namespace eval tna {
 	return $reg
     }
     proc register { name value { type {} } } {
+	variable TypesX
+
 	variable nreg
 	variable regs
+
+	set dims {}
+	set slic {}
 
 	if { [info command $name] ne {} } {
 	    set data [$name data]
 	    set type [$name type]
 	    set dims [$name dims]
+	    set slic [xindx $dims {}]
 	} elseif { [string is int    $value] } {
 	    set type int
 	    set data $value
-	    set dims {}
 	} elseif { [string is double $value] } {
 	    set type double
 	    set data $value
-	    set dims {}
 	} else {
 	    error "unknown identifier : $name"
 	}
 
-	set regs($name) [list $nreg $type $name $data $dims {}]
+	set regs($name) [list $nreg $type $name $TypesX($type) $data $dims $slic]
 	incr nreg
     }
 
 
     proc promote { c regc typec args } {
+	variable OpcodesX
 	variable text
 
 	upvar $c C
@@ -135,7 +141,7 @@ namespace eval tna {
 
 	    if { $type ne $typeC } {
 		set N [tempreg $typeC]
-		lappend text [list tna_opcode_${type}_${typeC} $reg 0 $N] 
+		lappend text $OpcodesX(tna_opcode_${type}_${typeC}) $reg 0 $N
 	    } else {
 		set N $reg
 	    }
@@ -145,24 +151,38 @@ namespace eval tna {
 	set C @$regC
     }
 
-    proc indx  { op args } {
-	puts "$op $args"
+    proc indx  { op name args } {
+	variable regs
+
+	if { [info commands $name] eq {} } {
+	    error "only an array can be indexed"
+	}
+
+	lookup $name - - - - - -
+
+	set reg [tempreg {}]
+	set regs($reg) $regs($name)
+
+	lset regs($reg) end [xindx [$name dims] $args]
+
+	return $reg
     }
 
     proc assign { op a b } {
+	variable OpcodesX
 	variable regs
 	variable text
 	
-	lookup $a regA typeA - dataA dimsA
-	lookup $b regB typeB - dataB dimsB
+	lookup $a regA typeA - - - -
+	lookup $b regB typeB - - - -
 
 	# If the types are the same and the target is a tmp register,
 	# change the target of the previous instr
 	#
-	if { $typeA eq $typeB && [info exists regs(@[lindex $text end end])] } {
-	    lset text end end $regA						
+	if { $typeA eq $typeB && [info exists regs(@[lindex $text end])] } {
+	    lset text end $regA						
 	} else {
-	    lappend text [list tna_opcode_${typeB}_$typeA $regB 0 $regA]
+	    lappend text $OpcodesX(tna_opcode_${typeB}_$typeA) $regB 0 $regA
 	}
 
 	return $a
@@ -205,65 +225,102 @@ namespace eval tna {
     interp alias {} ::tna::neq  {} ::tna::binop
 
     proc binop { op a b } {
+	variable OpcodesX
 	variable text
 
-	lookup $a regA typeA nameA dataA dimsA
-	lookup $b regB typeB nameB dataB dimsB
+	lookup $a regA typeA nameA - dataA dimsA
+	lookup $b regB typeB nameB - dataB dimsB
 
 	if { $dimsA eq {} && $dimsB eq {} } {		; # Try constant folding
 	    set c [::expr "\$dataA $::expression::opers($op) \$dataB"]
 
-	    lookup $c nameC - - - -
+	    lookup $c nameC - - - - -
 
 	    return $c
 	} else {
+
+	    # If one of the operands is a value its register should be promoted
+	    # to the type of the other operand.  Copy to a new register.
+
+
 	    promote C regC typeC $regA $typeA A $regB $typeB B
-	    lappend text [list tna_opcode_${op}_$typeC $A $B $regC]
+	    lappend text $OpcodesX(tna_opcode_${op}_$typeC) $A $B $regC
 
 	    return $C
 	}
     }
 
-    proc compile { op args } { return [$op $op {*}$args] }
+    proc Compile { op args } { return [$op $op {*}$args] }
 
-    proc expr { expr } {
-	puts $expr
-	puts ""
-
+    proc compile { expr } {
 	variable regs
 	variable nreg  1
 	variable text {}
 
 	::array unset regs
+	set regs(0) {0 any 0 0 {} {} }
 
-	expression::parse $expr [expression::prep-tokens $::expression::optable] $::expression::optable ::tna::compile
-	::tna::execute [::array get regs] $text
+	expression::parse $expr [expression::prep-tokens $::expression::optable] $::expression::optable ::tna::Compile
+
+	return [list [lsort -real -index 0 [map { name values } [::array get regs] { I $values }]] $text]
+    }
+    proc expr { expr } {
+	::tna::execute {*}[compile $expr]
     }
 
-    proc execute { regs text } {
+    proc print { regs text } {
+	puts [join $regs \n]
+	puts ""
+	puts [join [map { i r1 r2 r3 } $text { list $i $r1 $r2 $r3 }] \n]
+	puts ""
+    }
+    proc disassemble { regs text } {
+	variable TypesX
+	variable TypesR
+
 	variable OpcodesX
+	variable OpcodesR
 
-	puts [join [map { name value } [lsort -real -index {1 0} -stride 2 $regs] { list [format %10s $name] {*}$value }] \n]
-	puts ""
-	puts [join $text \n]
-	puts ""
-
-
-	set code {}
-	foreach instr $text {
-	     lappend code [list $OpcodesX([lindex $instr 0]) {*}[lrange $instr 1 end]]
+	if { ![info exists OpcodesR] } {
+	    foreach { name op } [::array get OpcodesX] {
+		set OpcodesR($op) $name
+	    }
 	}
-	puts [join $code \n]
-	puts ""
-
-	set code {}
-	foreach instr $text {
-	     append code [binary format s* [list $OpcodesX([lindex $instr 0]) {*}[lrange $instr 1 end]]]
+	if { ![info exists OpcodesR] } {
+	    foreach { name op } [::array get OpcodesX] {
+		set OpcodesR($op) $name
+	    }
+	}
+	if { ![info exists TypesR] } {
+	    set i 0
+	    foreach { name n } [::array get TypesX] {
+		set TypesR($n)  $name
+	    }
 	}
 
-	puts [string length $code]
-	binary scan $code s* disass
-	puts $disass
+	append listing 	"# TNA Disassembly Listing\n"
+	append listing	"#\n"
+	append listing	"#\n"
+	append listing	"# Registers\n"
+	append listing	"#\n"
+
+	foreach r $regs {
+	    lassign $r n type name data dims slice
+
+	    append listing [format " %4d  %-14s  %8s\n" $n $name $type]
+	}
+	append listing	"#\n"
+	append listing	"#\n"
+
+	append listing	"# Text\n"
+	append listing	"#\n"
+	set n 0
+	foreach { I R0 R1 R2 } $text {
+	    append listing [format " %4d  %25s  %10s %10s %10s\n"	\
+	    	[incr n] $OpcodesR($I) [lindex $regs $R0 2] [lindex $regs $R1 2] [lindex $regs $R2 2]]
+	}
+
+	return $listing
     }
 }
 
@@ -271,5 +328,14 @@ tna::array create A double 3 3
 tna::array create B int    3 3
 tna::array create C double 3 3 
 
-tna::expr { C[1,1] = A -= B * (4 + 6.0) }
+#tna::print {*}[tna::compile { A[1,1] = B }]
+#exit
+
+
+set expr { C = A -= B * (4 + 6.0) }
+puts [tna::disassemble {*}[tna::compile $expr]]
+tna::print {*}[tna::compile $expr]
+tna::execute {*}[tna::compile $expr]
+
+#tna::expr $expr
 

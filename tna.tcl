@@ -96,6 +96,11 @@ namespace eval tna {
 	return $opcodes
     }
 
+    critcl::ccode {
+	#include <stdlib.h>
+	#include <stdio.h>
+	#include <math.h>
+    }
     critcl::ccode "#define RLEN $regsize"
 
     set i 1
@@ -126,9 +131,6 @@ namespace eval tna {
 }
 
 critcl::ccode {
-    #include <stdlib.h>
-    #include <stdio.h>
-    #include <math.h>
 
     #include "/Users/john/src/tna/tna.h"		/* The cheaders directive above didn't seem to take?	*/
 
@@ -148,9 +150,9 @@ critcl::ccode {
 	    type3	*addr3 = (type3 *)r3->offs[0];						\
 	    int	 i;										\
 												\
-	    int	i1 = r1->slice.ax[0].size;							\
-	    int	i2 = r2->slice.ax[0].size;							\
-	    int	i3 = r3->slice.ax[0].size;							\
+	    int	i1 = r1->axis[0].size;							\
+	    int	i2 = r2->axis[0].size;							\
+	    int	i3 = r3->axis[0].size;							\
 												\
 	    while ( n >= RLEN ) { for ( i = 0; i <  RLEN; i++ ) { expr; INCR } n -= RLEN; }	\
 	    while ( n >=    8 ) { for ( i = 0; i <     8; i++ ) { expr; INCR }  n -=   8; }	\
@@ -171,19 +173,19 @@ critcl::ccode [subst {
 
 critcl::ccode [string map [list %TypeCases $::tna::TypeCases] {
     void slice_off(Register *r, int d, int x) {
-	if ( r->slice.ax[d].size == -(d+1) ) {
-	    switch ( r->slice.ax[d].type ) {		// Slice index access from a typed Value register.
+	if ( r->axis[d].size == -(d+1) ) {
+	    switch ( r->type ) {		// Slice index access from a typed Value register.
 		%TypeCases
 	    }
 	}
-	if ( !r->slice.ax[d].size ) { return; }		// no need to adjust offset of a Value or temp register.
+	if ( !r->axis[d].size ) { return; }		// no need to adjust offset of a Value or temp register.
 
 	r->offs[d] = ((char *)r->offs[d+1])		// Adjust offset into Array type.
-		    + ((r->slice.ax[d].star+((x*r->slice.ax[d].incr)
-		    %   r->slice.ax[d].size))
-		    %   r->slice.ax[d].dims)
-		    *   r->slice.ax[d].step
-		    *   r->slice.ax[d].type;
+		    + ((r->axis[d].star+((x*r->axis[d].incr)
+		    %   r->axis[d].size))
+		    %   r->axis[d].dims)
+		    *   r->axis[d].step
+		    *   r->type;
     }
 }]
 
@@ -194,7 +196,7 @@ critcl::ccode {
 
 	for ( i = 0; i < NDIM; i++ ) {
 	    r->offs[i] = value;
-	    r->slice.ax[i].size = 0;
+	    r->axis[i].size = 0;
 	}
     }
 
@@ -202,12 +204,13 @@ critcl::ccode {
     {
 	slice_val(r, malloc(RLEN * 8));
 
-	r->slice.ax[0].star = 0;
-	r->slice.ax[0].incr = 1;
-	r->slice.ax[0].size = RLEN;
-	r->slice.ax[0].dims = RLEN;
-	r->slice.ax[0].step = 1;
-	r->slice.ax[0].type = type;
+	r->type = type;
+
+	r->axis[0].star = 0;
+	r->axis[0].incr = 1;
+	r->axis[0].size = RLEN;
+	r->axis[0].dims = RLEN;
+	r->axis[0].step = 1;
     }
 
 
@@ -244,9 +247,9 @@ critcl::ccode {
 		    int bite = rl;
 		    bite     = Min(rl, X1 - x);
 
-		    if ( R[instr->r1].slice.ax[dim].size ) { bite = Min(bite, R[instr->r1].slice.ax[dim].size); }
-		    if ( R[instr->r2].slice.ax[dim].size ) { bite = Min(bite, R[instr->r2].slice.ax[dim].size); }
-		    if ( R[instr->r3].slice.ax[dim].size ) { bite = Min(bite, R[instr->r3].slice.ax[dim].size); }
+		    if ( R[instr->r1].axis[dim].size ) { bite = Min(bite, R[instr->r1].axis[dim].size); }
+		    if ( R[instr->r2].axis[dim].size ) { bite = Min(bite, R[instr->r2].axis[dim].size); }
+		    if ( R[instr->r3].axis[dim].size ) { bite = Min(bite, R[instr->r3].axis[dim].size); }
 
 
 		    for ( ; left > 0; left -= bite ) {	// Run at most the length of the smallest slice
@@ -298,8 +301,111 @@ namespace eval tna {
 	}
     }
 
-    critcl::cproc execute { Tcl_Interp* ip Tcl_Obj* text Tcl_Obj* registers } ok {
+    critcl::cproc execute { Tcl_Interp* ip Tcl_Obj* regsList Tcl_Obj* textList } ok {
+	int 	i;
+	int 	nregs;
+	int 	ntext;
 
+	int      regsObjc;
+	Tcl_Obj **regsObjv;
+
+	int      textObjc;
+	Tcl_Obj **textObjv;
+
+	Register*regs;
+
+	short	*text;
+	int	 thisInt;
+	long	 thisLong;
+
+	int	itemType;
+	int	dataType;
+
+	double dataValu;
+
+
+	// Copy the registers Tcl structure into the C struct.
+	//
+	if ( Tcl_ListObjGetElements(ip, regsList, &nregs, &regsObjv) == TCL_ERROR ) { return; }
+
+	regs = malloc(sizeof(Register) * nregs);
+
+	for ( i = 0; i < textObjc; i++ ) {
+	    int	     leng;
+	    int      regObjc;
+	    Tcl_Obj **regObjv;
+
+	    if ( Tcl_ListObjGetElements(ip, regsObjv[i], &regObjc, &regObjv) == TCL_ERROR ) { return; }
+
+	    // reg typ obj num dat dim
+	    //
+	    if ( Tcl_GetIntFromObj( ip, regObjv[3], &thisInt ) == TCL_ERROR ) {
+		free(regs);
+		return;
+	    }
+	    itemType = thisInt;
+
+	    if ( Tcl_GetIntFromObj( ip, regObjv[3], &thisInt ) == TCL_ERROR ) {
+		free(regs);
+		return;
+	    }
+	    dataType = thisInt;
+
+	    if ( Tcl_GetLongFromObj(ip, regObjv[5], &thisLong) == TCL_ERROR ) {
+		free(regs);
+		return;
+	    }
+	    regs[i].data = (void *) thisLong;
+
+#define TempRegister	0
+#define ValuRegister	1
+#define DataRegister	2
+
+
+	    switch ( itemType ) {
+	     case TempRegister: slice_reg(&regs[i], dataType);	 break;
+	     case ValuRegister:
+
+		switch ( dataType ) {
+		 case TNA_TYPE_char:		
+		 case TNA_TYPE_uchar:
+		 case TNA_TYPE_short:
+		 case TNA_TYPE_ushort:
+		 case TNA_TYPE_int:
+		 case TNA_TYPE_uint:
+		 case TNA_TYPE_long:
+		 case TNA_TYPE_ulong:
+		 case TNA_TYPE_float:
+		 case TNA_TYPE_double: break;
+		}
+
+		slice_val(&regs[i], (void *)&dataValu);
+		break;
+
+	     case DataRegister:
+		break;
+	    }
+
+	}
+
+	// Convert the textList into an array of shorts.
+	//
+	if ( Tcl_ListObjGetElements(ip, textList, &ntext, &textObjv) == TCL_ERROR ) { return; }
+
+	text = malloc(sizeof(short) * ntext);
+
+	for ( i = 0; i < textObjc; i++ ) {
+	    if ( Tcl_GetIntFromObj(ip, textObjv[i], &thisInt) == TCL_ERROR ) {
+		free(text);
+		free(regs);
+		return;
+	    }
+
+	    text[i] = thisInt;
+
+	    //printf("%d ", thisInt);
+	}
+	//printf("\n");
 
 	return TCL_OK;
     }
@@ -307,6 +413,12 @@ namespace eval tna {
 
 
 
-if { [::critcl::compiled] } { ::tna::opcodesX }
+if { [::critcl::compiled] } {
+    ::tna::opcodesX
+    set i 0
+    foreach { name def } $::tna::Types {
+	set ::tna::TypesX($name) [incr i]
+    }
+}
 
 

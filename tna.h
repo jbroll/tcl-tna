@@ -8,18 +8,15 @@ typedef struct _Axis {
     long	size;		/* slice size			*/
     long	incr;		/* increment			*/
     long	step;		/* block size of the dimension	*/
-    long	type;		/* byte size of data type	*/
     long	dims;		/* dimension of the data	*/
 } Axis;
 
-typedef struct _Slice {		/* definition of the slice	*/
-    void	*data;
-    Axis	 ax[NDIM];
-} Slice;
-
 typedef struct _Register {
+    long	 type;		/* data type			*/
+    void	*data;		/* pointer to data 		*/
+    double	 valu;
     void	*offs[NDIM];	/* Offset at this index level	*/
-    Slice	 slice;
+    Axis	 axis[NDIM];
 } Register;
 
 typedef struct _Instruct {
