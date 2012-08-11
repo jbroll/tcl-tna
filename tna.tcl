@@ -16,17 +16,17 @@ namespace eval tna {
 
     # This array defines the types available in the package.
     #
+    #       tnaType CType         	pType	pFmt	getType	getFunc
     set Types {
-	      char {  char              int     %d }
-	     uchar { "unsigned char"    int     %d }
-	     short {  short		int     %d }
-	    ushort { "unsigned short"	int     %d }
-	       int {  int 		int     %d }
-	      uint { "unsigned int"	long    %u }
-	      long {  long		long   %ld }
-	     ulong { "unsigned long"	ulong  %lu }
-	     float {  float		double  %f }
-	    double {  double		double  %f }
+	      char  char              	int     %d 	int	Tcl_GetIntFromObj
+	     uchar "unsigned char"    	int     %d 	int	Tcl_GetIntFromObj 
+	     short  short		int     %d 	int	Tcl_GetIntFromObj 
+	    ushort "unsigned short"	int     %d 	int	Tcl_GetIntFromObj 
+	       int  int 		int     %d 	int	Tcl_GetIntFromObj 
+	      uint "unsigned int"	long    %u 	long	Tcl_GetLongFromObj 
+	      long  long		long   %ld 	long	Tcl_GetLongFromObj 
+	     float  float		double  %f 	double	Tcl_GetDoubleFromObj 
+	    double  double		double  %f 	double	Tcl_GetDoubleFromObj 
     }
 
     set IntOnly { mod band bor bxor bnot shr shl }
@@ -78,7 +78,7 @@ namespace eval tna {
     proc opcodes {} {
 	set opcodes {}
 
-	foreach { type def } $tna::Types {
+	foreach { type CType  pType   pFmt    getType getFunc } $tna::Types {
 	    foreach { name code } $::tna::Opcodes {
 		set T $type
 
@@ -88,7 +88,7 @@ namespace eval tna {
 		lappend opcodes $name $T $type $code
 	    }
 
-	    foreach { type2 def } $::tna::Types {
+	    foreach { type2 CType pType   pFmt    getType getFunc } $::tna::Types {
 		lappend opcodes $type $type $type2 { R3 = R1 }
 	    }
 	}
@@ -104,8 +104,7 @@ namespace eval tna {
     critcl::ccode "#define RLEN $regsize"
 
     set i 1
-    foreach { type def } $::tna::Types { 
-	lassign $def ctype xtype format 
+    foreach { type ctype pType   pFmt    getType getFunc } $::tna::Types { 
 
 	# Create a proc to allocate memory, and return the sizeof each type
 	#
@@ -228,8 +227,8 @@ critcl::ccode {
 
 	dim--;
 
-	x  = machine->X0[dim];
-	X1 = machine->X1[dim];
+	x  =     machine->dims[dim].start;
+	X1 = x + machine->dims[dim].end;
 	for ( X = 0; X < X1; ) {				// Run over the entire dimension
 	    if ( dim ) {
 		int i;
@@ -301,15 +300,14 @@ namespace eval tna {
 	}
     }
 
-    critcl::cproc execute { Tcl_Interp* ip Tcl_Obj* regsList Tcl_Obj* textList } ok {
-	int 	i;
+    critcl::cproc execute { Tcl_Interp* ip Tcl_Obj* regsList Tcl_Obj* textList } ok [template:subst {
+	int 	i, s;
 	int 	nregs;
 	int 	ntext;
 
 	int      regsObjc;
 	Tcl_Obj **regsObjv;
 
-	int      textObjc;
 	Tcl_Obj **textObjv;
 
 	Register*regs;
@@ -323,92 +321,155 @@ namespace eval tna {
 
 	double dataValu;
 
+	int	ndim = 0;
 
-	// Copy the registers Tcl structure into the C struct.
+	// Copy the registers Tcl structure into the Register C struct.
 	//
-	if ( Tcl_ListObjGetElements(ip, regsList, &nregs, &regsObjv) == TCL_ERROR ) { return; }
+	if ( Tcl_ListObjGetElements(ip, regsList, &nregs, &regsObjv) == TCL_ERROR ) { return TCL_ERROR; }
 
 	regs = malloc(sizeof(Register) * nregs);
 
-	for ( i = 0; i < textObjc; i++ ) {
+	for ( i = 0; i < nregs; i++ ) {
 	    int	     leng;
 	    int      regObjc;
 	    Tcl_Obj **regObjv;
 
-	    if ( Tcl_ListObjGetElements(ip, regsObjv[i], &regObjc, &regObjv) == TCL_ERROR ) { return; }
+	    if ( Tcl_ListObjGetElements(ip, regsObjv[i], &regObjc, &regObjv) == TCL_ERROR ) { return TCL_ERROR; }
 
-	    // reg typ obj num dat dim
+	    // reg typ itm : obj dat dim slice
 	    //
-	    if ( Tcl_GetIntFromObj( ip, regObjv[3], &thisInt ) == TCL_ERROR ) {
+	    if ( Tcl_GetIntFromObj( ip, regObjv[6], &thisInt ) == TCL_ERROR ) {
 		free(regs);
-		return;
+		return TCL_ERROR;
 	    }
 	    itemType = thisInt;
 
-	    if ( Tcl_GetIntFromObj( ip, regObjv[3], &thisInt ) == TCL_ERROR ) {
+	    if ( Tcl_GetIntFromObj( ip, regObjv[7], &thisInt ) == TCL_ERROR ) {
 		free(regs);
-		return;
+		return TCL_ERROR;
 	    }
 	    dataType = thisInt;
 
-	    if ( Tcl_GetLongFromObj(ip, regObjv[5], &thisLong) == TCL_ERROR ) {
-		free(regs);
-		return;
-	    }
-	    regs[i].data = (void *) thisLong;
 
-#define TempRegister	0
-#define ValuRegister	1
-#define DataRegister	2
+#define NoneRegister	0
+#define TempRegister	1
+#define ValuRegister	2
+#define DataRegister	3
 
 
 	    switch ( itemType ) {
 	     case TempRegister: slice_reg(&regs[i], dataType);	 break;
 	     case ValuRegister:
-
 		switch ( dataType ) {
-		 case TNA_TYPE_char:		
-		 case TNA_TYPE_uchar:
-		 case TNA_TYPE_short:
-		 case TNA_TYPE_ushort:
-		 case TNA_TYPE_int:
-		 case TNA_TYPE_uint:
-		 case TNA_TYPE_long:
-		 case TNA_TYPE_ulong:
-		 case TNA_TYPE_float:
-		 case TNA_TYPE_double: break;
+		    [: { type ctype pType   pFmt    getType getFunc } $::tna::Types {
+
+		     case TNA_TYPE_$type: {
+			$getType this;
+
+			if ( ${getFunc}(ip, regObjv[4], &this) == TCL_ERROR ) {
+			    free(regs);
+			    return TCL_ERROR;
+			}
+			regs[i].value._$type = this;
+			break;
+		      }
+		    }]
+		}
+		slice_val(&regs[i], (void *)&regs[i].value);
+		break;
+
+	     case DataRegister: {
+		    int       sObjc;
+		    Tcl_Obj **sObjv;
+
+		/* Unpack the slice data	*/
+
+		if ( Tcl_ListObjGetElements(ip, regObjv[9], &sObjc, &sObjv) == TCL_ERROR ) {
+		    free(regs);
+		    return TCL_ERROR;
 		}
 
-		slice_val(&regs[i], (void *)&dataValu);
-		break;
+		if ( ndim < sObjc ) { ndim = sObjc; }
 
-	     case DataRegister:
+		for ( s = 0; s < sObjc; s++ ) {
+		    int       sliceObjc;
+		    Tcl_Obj **sliceObjv;
+
+		    if ( Tcl_ListObjGetElements(ip, sObjv[s], &sliceObjc, &sliceObjv) == TCL_ERROR ) {
+			free(regs);
+			return TCL_ERROR;
+		    }
+		    if ( sliceObjc != 3 ) {
+			Tcl_AddErrorInfo(ip, "each slice should have 3 values");
+			free(regs);
+			return TCL_ERROR;
+		    }
+
+		    if ( Tcl_GetIntFromObj(ip, sliceObjv[0], &thisInt ) == TCL_ERROR ) {
+			free(regs);
+			return TCL_ERROR;
+		    }
+		    regs[i].axis[s].star = thisInt;
+
+		    if ( Tcl_GetIntFromObj(ip, sliceObjv[1], &thisInt ) == TCL_ERROR ) {
+			free(regs);
+			return TCL_ERROR;
+		    }
+		    regs[i].axis[s].size = thisInt - regs[i].axis[0].star;
+
+		    if ( Tcl_GetIntFromObj(ip, sliceObjv[2], &thisInt ) == TCL_ERROR ) {
+			free(regs);
+			return TCL_ERROR;
+		    }
+		    regs[i].axis[s].incr = thisInt;
+		}
+		
 		break;
+	     }
 	    }
-
 	}
 
 	// Convert the textList into an array of shorts.
 	//
-	if ( Tcl_ListObjGetElements(ip, textList, &ntext, &textObjv) == TCL_ERROR ) { return; }
+	if ( Tcl_ListObjGetElements(ip, textList, &ntext, &textObjv) == TCL_ERROR ) { return TCL_ERROR; }
 
 	text = malloc(sizeof(short) * ntext);
 
-	for ( i = 0; i < textObjc; i++ ) {
+	for ( i = 0; i < ntext; i++ ) {
 	    if ( Tcl_GetIntFromObj(ip, textObjv[i], &thisInt) == TCL_ERROR ) {
 		free(text);
 		free(regs);
-		return;
+		return TCL_ERROR;
 	    }
 
 	    text[i] = thisInt;
-
-	    //printf("%d ", thisInt);
 	}
-	//printf("\n");
+
+	for ( i = 0 ; i < nregs; i++ ) {
+	    int j;
+
+	    printf("%d\n", i);
+	    for ( j = 0; j < ndim; j++ ) {
+		printf("	%ld : %ld\n", regs[i].axis[j].star, regs[i].axis[j].size);
+	    }
+	}
+	{
+	    Machine m;
+	    Dim	    dims;
+
+	    m.program   =  text;
+	    m.ni        = ntext;
+	    m.registers = regs;
+	    m.nr        = nregs;
+
+	    m.dims	= &dims;
+	    m.nd	= ndim;
+
+	    slice_run(&m, ndim);
+	}
 
 	return TCL_OK;
-    }
+    }]
 }
 
 
@@ -416,8 +477,8 @@ namespace eval tna {
 if { [::critcl::compiled] } {
     ::tna::opcodesX
     set i 0
-    foreach { name def } $::tna::Types {
-	set ::tna::TypesX($name) [incr i]
+    foreach { tnaType CType pType pFmt getType getFunc } $::tna::Types {
+	set ::tna::TypesX($tnaType) [incr i]
     }
 }
 

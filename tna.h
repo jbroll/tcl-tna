@@ -14,7 +14,17 @@ typedef struct _Axis {
 typedef struct _Register {
     long	 type;		/* data type			*/
     void	*data;		/* pointer to data 		*/
-    double	 valu;
+    union	 {
+	char	_char;
+	uchar	_uchar;
+	short	_short;
+	ushort	_ushort;
+	int	_int;
+	uint	_uint;
+	long	_long;
+	float	_float;
+	double	_double;
+    } value;
     void	*offs[NDIM];	/* Offset at this index level	*/
     Axis	 axis[NDIM];
 } Register;
@@ -26,13 +36,19 @@ typedef struct _Instruct {
     short	r3;
 } Instruct;
 
+typedef struct _Dim {
+    int	start;
+    int	end;
+
+} Dim;
+
 typedef struct _Machine {
     int	   ni;
     Instruct *program;
     int    nr;
     Register *registers;
-    int    X0[NDIM];
-    int    X1[NDIM];
+    Dim    *dims;
+    int    nd;
 } Machine;
 
 
@@ -42,4 +58,6 @@ typedef struct _OpTable {
     OpFunc     *func;
     const char *name;
 } OpTable;
+
+
 

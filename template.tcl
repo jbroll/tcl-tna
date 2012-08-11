@@ -38,6 +38,10 @@ proc template:switch { value cases } {
     return [uplevel [subst { switch $value { $body } }]]
 }
 
+proc template:subst { string } {
+    subst [string map { \\ \\\\ [! [ [: [: [* [* [? [? [ \\[ } $string]
+}
+
 
 interp alias {} : {} template:foreach
 interp alias {} * {} template:switch

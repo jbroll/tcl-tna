@@ -35,6 +35,8 @@ oo::class create tna::value {
 namespace eval tna {
     set text {}
 
+    ::array set ItemsX { none 0 temp 1 const 2 tna 3 }
+
     proc xindx { dims indx } {			  # Parse the slice syntax into a list.
 	foreach d $dims x $indx {
 	    if { $d eq {} } { break }
@@ -64,23 +66,24 @@ namespace eval tna {
 	return $list
     }
 
-    proc lookup { name regName typName objName numName datName dimName } {
+    proc lookup { name regName typName itmName datName } {
 	variable regs
 
 	upvar $regName reg
 	upvar $typName typ
-	upvar $objName obj
-	upvar $numName num
+	upvar $itmName itm
 	upvar $datName dat
-	upvar $dimName dim
 
 	if { ![info exists regs($name)] } {
 	    register $name $name
 	}
-	lassign $regs($name) reg typ obj num dat dim
+	lassign $regs($name) reg typ itm dat
     }
 
     proc tempreg { type { value {} } } {
+	variable ItemsX
+	variable TypesX
+
 	variable regs
 	variable nreg
 
@@ -89,25 +92,28 @@ namespace eval tna {
 	set data $value
 
 
-	set regs($name) [list $nreg $type $name $data * {}]
+	set regs($name) [list $nreg $type temp $name temp : $ItemsX(temp) $TypesX($type) {} {}]
 	incr nreg
 
 	return $reg
     }
     proc register { name value { type {} } } {
 	variable TypesX
+	variable ItemsX
 
 	variable nreg
 	variable regs
 
 	set dims {}
 	set slic {}
+	set item const
 
 	if { [info command $name] ne {} } {
 	    set data [$name data]
 	    set type [$name type]
 	    set dims [$name dims]
 	    set slic [xindx $dims {}]
+	    set item tna
 	} elseif { [string is int    $value] } {
 	    set type int
 	    set data $value
@@ -118,7 +124,7 @@ namespace eval tna {
 	    error "unknown identifier : $name"
 	}
 
-	set regs($name) [list $nreg $type $name $TypesX($type) $data $dims $slic]
+	set regs($name) [list $nreg $type $item $name $data : $ItemsX($item) $TypesX($type) $dims $slic]
 	incr nreg
     }
 
@@ -158,7 +164,7 @@ namespace eval tna {
 	    error "only an array can be indexed"
 	}
 
-	lookup $name - - - - - -
+	lookup $name - - - -
 
 	set reg [tempreg {}]
 	set regs($reg) $regs($name)
@@ -173,8 +179,8 @@ namespace eval tna {
 	variable regs
 	variable text
 	
-	lookup $a regA typeA - - - -
-	lookup $b regB typeB - - - -
+	lookup $a regA typeA - -
+	lookup $b regB typeB - -
 
 	# If the types are the same and the target is a tmp register,
 	# change the target of the previous instr
@@ -228,21 +234,16 @@ namespace eval tna {
 	variable OpcodesX
 	variable text
 
-	lookup $a regA typeA nameA - dataA dimsA
-	lookup $b regB typeB nameB - dataB dimsB
+	lookup $a regA typeA itemA dataA
+	lookup $b regB typeB itemB dataB
 
-	if { $dimsA eq {} && $dimsB eq {} } {		; # Try constant folding
+	if { $itemA eq "const" && $itemB eq "const" } {		; # Try constant folding
 	    set c [::expr "\$dataA $::expression::opers($op) \$dataB"]
 
-	    lookup $c nameC - - - - -
+	    lookup $c - - - -
 
 	    return $c
 	} else {
-
-	    # If one of the operands is a value its register should be promoted
-	    # to the type of the other operand.  Copy to a new register.
-
-
 	    promote C regC typeC $regA $typeA A $regB $typeB B
 	    lappend text $OpcodesX(tna_opcode_${op}_$typeC) $A $B $regC
 
@@ -257,8 +258,11 @@ namespace eval tna {
 	variable nreg  1
 	variable text {}
 
+	variable ItemsX
+	variable TypesX
+
 	::array unset regs
-	set regs(0) {0 any 0 0 {} {} }
+	set regs(0) [list 0 0 cinst 0 0 : $ItemsX(const) $TypesX(int) {} {}]
 
 	expression::parse $expr [expression::prep-tokens $::expression::optable] $::expression::optable ::tna::Compile
 
@@ -305,9 +309,9 @@ namespace eval tna {
 	append listing	"#\n"
 
 	foreach r $regs {
-	    lassign $r n type name data dims slice
+	    lassign $r n type item name data dims slice
 
-	    append listing [format " %4d  %-14s  %8s\n" $n $name $type]
+	    append listing [format " %4d  %-8s %-14s  %8s\n" $n $item $name $type]
 	}
 	append listing	"#\n"
 	append listing	"#\n"
@@ -333,6 +337,7 @@ tna::array create C double 3 3
 
 
 set expr { C = A -= B * (4 + 6.0) }
+
 puts [tna::disassemble {*}[tna::compile $expr]]
 tna::print {*}[tna::compile $expr]
 tna::execute {*}[tna::compile $expr]
