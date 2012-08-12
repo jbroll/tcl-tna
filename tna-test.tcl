@@ -262,7 +262,7 @@ namespace eval tna {
 	variable TypesX
 
 	::array unset regs
-	set regs(0) [list 0 0 cinst 0 0 : $ItemsX(const) $TypesX(int) {} {}]
+	set regs(0) [list 0 0 @0 0 0 : $ItemsX(const) $TypesX(int) {} {}]
 
 	expression::parse $expr [expression::prep-tokens $::expression::optable] $::expression::optable ::tna::Compile
 
@@ -272,7 +272,7 @@ namespace eval tna {
 	::tna::execute {*}[compile $expr]
     }
 
-    proc print { regs text } {
+    proc mprint { regs text } {
 	puts [join $regs \n]
 	puts ""
 	puts [join [map { i r1 r2 r3 } $text { list $i $r1 $r2 $r3 }] \n]
@@ -309,9 +309,14 @@ namespace eval tna {
 	append listing	"#\n"
 
 	foreach r $regs {
-	    lassign $r n type item name data dims slice
+	    lassign $r n type item name data : i t dims slice
 
-	    append listing [format " %4d  %-8s %-14s  %8s\n" $n $item $name $type]
+	    switch $item {
+		none -
+		temp  { append listing [format " %4d  %-8s %-14s  %8s\n" $n $item $name $type] }
+		const { append listing [format " %4d  %-8s %-14s  %8s	%f\n" $n $item $name $type $data] }
+		tna   { append listing [format " %4d  %-8s %-14s  %8s	0x%08x : %s %s\n" $n $item $name $type $data $dims $slice] }
+	    }
 	}
 	append listing	"#\n"
 	append listing	"#\n"
@@ -321,7 +326,7 @@ namespace eval tna {
 	set n 0
 	foreach { I R0 R1 R2 } $text {
 	    append listing [format " %4d  %25s  %10s %10s %10s\n"	\
-	    	[incr n] $OpcodesR($I) [lindex $regs $R0 2] [lindex $regs $R1 2] [lindex $regs $R2 2]]
+	    	[incr n] $OpcodesR($I) [lindex $regs $R0 3] [lindex $regs $R1 3] [lindex $regs $R2 3]]
 	}
 
 	return $listing
@@ -333,14 +338,17 @@ tna::array create B int    3 3
 tna::array create C double 3 3 
 
 #tna::print {*}[tna::compile { A[1,1] = B }]
-#exit
 
 
-set expr { C = A -= B * (4 + 6.0) }
+set expr { C = A -= B + (3 + 6.0) }
 
 puts [tna::disassemble {*}[tna::compile $expr]]
-tna::print {*}[tna::compile $expr]
+#tna::print {*}[tna::compile $expr]
 tna::execute {*}[tna::compile $expr]
+
+tna::print [A data] {*}[A dims]
+tna::print [C data] {*}[C dims]
+
 
 #tna::expr $expr
 

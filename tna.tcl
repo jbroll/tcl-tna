@@ -108,8 +108,12 @@ namespace eval tna {
 
 	# Create a proc to allocate memory, and return the sizeof each type
 	#
-	critcl::cproc malloc_$type { long size } long "return (long) malloc(size*sizeof($ctype));"
-	critcl::cproc sizeof_$type { long size } long "return sizeof($ctype);"
+	critcl::cproc malloc_$type { long size } long [subst {
+	    void *buff = calloc(size*sizeof($ctype), 1);
+	    printf("malloc %p\\n", buff);
+
+	    return (long) buff;
+	}]
 
 	# Add typedefs for any that are not C primitive types
 	#
@@ -126,7 +130,6 @@ namespace eval tna {
 
 	incr i
     }
-
 }
 
 critcl::ccode {
@@ -149,9 +152,9 @@ critcl::ccode {
 	    type3	*addr3 = (type3 *)r3->offs[0];						\
 	    int	 i;										\
 												\
-	    int	i1 = r1->axis[0].size;							\
-	    int	i2 = r2->axis[0].size;							\
-	    int	i3 = r3->axis[0].size;							\
+	    int	i1 = r1->axis[0].size;								\
+	    int	i2 = r2->axis[0].size;								\
+	    int	i3 = r3->axis[0].size;								\
 												\
 	    while ( n >= RLEN ) { for ( i = 0; i <  RLEN; i++ ) { expr; INCR } n -= RLEN; }	\
 	    while ( n >=    8 ) { for ( i = 0; i <     8; i++ ) { expr; INCR }  n -=   8; }	\
@@ -168,42 +171,78 @@ critcl::ccode [subst {
 	{ NULL, "nop" }
 	[: { name type type2 code } [tna::opcodes] {	, { tna_opcode_${name}_${type2}, "tna_opcode_${name}_${type2}" }\n}]
     };
+
+    int SizeOf\[] = {
+	0 [: { type ctype pType   pFmt    getType getFunc } $::tna::Types { , sizeof($type) }]
+    };
 }]
 
 critcl::ccode [string map [list %TypeCases $::tna::TypeCases] {
+    rprint(Register *r, int n) {
+	int i;
+
+	printf("%p data %p item %d type %d sizeof %d\n"
+		, r
+		, r->data
+		, r->item
+		, r->type
+		, SizeOf[r->type]
+	    );
+	for ( i = 0; i <= n; i++ ) {
+	    printf("	star %ld size %ld incr %ld dims %ld step %ld		%p\n"
+		, r->axis[i].star, r->axis[i].size, r->axis[i].incr, r->axis[i].dims, r->axis[i].step, r->offs[i]);
+	}
+    }
+
     void slice_off(Register *r, int d, int x) {
 	if ( r->axis[d].size == -(d+1) ) {
-	    switch ( r->type ) {		// Slice index access from a typed Value register.
+	    switch ( r->type ) {			// Slice index access from a typed Value register.
 		%TypeCases
 	    }
 	}
-	if ( !r->axis[d].size ) { return; }		// no need to adjust offset of a Value or temp register.
+
+	if ( r->axis[d].size <= 0 ) { return; }		// no need to adjust offset of a Value or temp register.
 
 	r->offs[d] = ((char *)r->offs[d+1])		// Adjust offset into Array type.
 		    + ((r->axis[d].star+((x*r->axis[d].incr)
 		    %   r->axis[d].size))
 		    %   r->axis[d].dims)
 		    *   r->axis[d].step
-		    *   r->type;
+		    *   SizeOf[r->type];
+
+//	printf("_off %p %d %p : %p, star %ld x %d incr %ld size %ld dims %ld step %ld type %d\n", r, d, r->offs[d], r->offs[d+1]
+//			, r->axis[d].star, x
+//			, r->axis[d].incr
+//			, r->axis[d].size
+//			, r->axis[d].dims
+//			, r->axis[d].step
+//			, SizeOf[r->type]
+//		);
     }
 }]
 
 critcl::ccode {
-    void slice_val(Register *r, void *value) 
+    void slice_val(Register *r, int type, void *value) 
     {
 	    int i;
 
+	r->type = type;
+	r->data = value;
+
 	for ( i = 0; i < NDIM; i++ ) {
 	    r->offs[i] = value;
+	    r->axis[i].star = 0;
+	    r->axis[i].incr = 0;
 	    r->axis[i].size = 0;
+	    r->axis[i].dims = 0;
+	    r->axis[i].step = 0;
 	}
+	r->offs[i] = value;
     }
 
     void slice_reg(Register *r, int type)
     {
-	slice_val(r, malloc(RLEN * 8));
-
-	r->type = type;
+	slice_val(r, type, malloc(RLEN * 8));
 
 	r->axis[0].star = 0;
 	r->axis[0].incr = 1;
@@ -241,7 +280,7 @@ critcl::ccode {
 		int rl = Min(RLEN, X1 - X);
 
 		x = X;
-		for ( instr = program; instr->opcode; instr++ ) {	// Execute the instructions one bank at a time
+		for ( instr = program; ni--; instr++ ) {	// Execute the instructions one bank at a time
 		    int left = rl;
 		    int bite = rl;
 		    bite     = Min(rl, X1 - x);
@@ -258,7 +297,6 @@ critcl::ccode {
 			slice_off(&R[instr->r2], 0, x);
 			slice_off(&R[instr->r3], 0, x);
 
-
 			OpCodes[instr->opcode].func(bite
 				, &R[instr->r1]
 				, &R[instr->r2]
@@ -274,16 +312,6 @@ critcl::ccode {
 	}
     }
 
-    void print(double *data, int nx, int ny)  {
-	    int i, j;
-
-	for ( j = 0; j < ny; j++ ) {
-	    for ( i = 0; i < ny; i++ ) {
-		printf(" %7.2f", data[j*nx+i]);
-	    }
-	    printf("\n");
-	}
-    }
 
 }
 
@@ -299,11 +327,27 @@ namespace eval tna {
 	    Tcl_ObjSetVar2(ip, tnaOpcodes, opname, opcode, TCL_GLOBAL_ONLY);
 	}
     }
+    critcl::cproc print { long Data int nx int ny }  void {
+	    double *data = (double *) Data;
+
+	    int i, j;
+
+	    printf("print %p\n", data);
+
+	for ( j = 0; j < ny; j++ ) {
+	    for ( i = 0; i < ny; i++ ) {
+		printf(" %7.2f", data[j*nx+i]);
+	    }
+	    printf("\n");
+	}
+    }
 
     critcl::cproc execute { Tcl_Interp* ip Tcl_Obj* regsList Tcl_Obj* textList } ok [template:subst {
 	int 	i, s;
 	int 	nregs;
 	int 	ntext;
+
+	long	data;
 
 	int      regsObjc;
 	Tcl_Obj **regsObjv;
@@ -338,18 +382,16 @@ namespace eval tna {
 
 	    // reg typ itm : obj dat dim slice
 	    //
-	    if ( Tcl_GetIntFromObj( ip, regObjv[6], &thisInt ) == TCL_ERROR ) {
+	    if ( Tcl_GetIntFromObj( ip, regObjv[6], &itemType ) == TCL_ERROR ) {
 		free(regs);
 		return TCL_ERROR;
 	    }
-	    itemType = thisInt;
+	    regs[i].item = itemType;
 
-	    if ( Tcl_GetIntFromObj( ip, regObjv[7], &thisInt ) == TCL_ERROR ) {
+	    if ( Tcl_GetIntFromObj( ip, regObjv[7], &dataType ) == TCL_ERROR ) {
 		free(regs);
 		return TCL_ERROR;
 	    }
-	    dataType = thisInt;
-
 
 #define NoneRegister	0
 #define TempRegister	1
@@ -375,25 +417,69 @@ namespace eval tna {
 		      }
 		    }]
 		}
-		slice_val(&regs[i], (void *)&regs[i].value);
+		slice_val(&regs[i], dataType, (void *)&regs[i].value);
 		break;
 
 	     case DataRegister: {
+		    int       dObjc;
+		    Tcl_Obj **dObjv;
+
 		    int       sObjc;
 		    Tcl_Obj **sObjv;
 
-		/* Unpack the slice data	*/
+		regs[i].type = dataType;
 
+		if ( Tcl_GetLongFromObj( ip, regObjv[4], &data ) == TCL_ERROR ) {
+		    free(regs);
+		    return TCL_ERROR;
+		}
+		regs[i].data = data;
+
+
+		/* Unpack the dims and slice data	*/
+
+		if ( Tcl_ListObjGetElements(ip, regObjv[8], &dObjc, &dObjv) == TCL_ERROR ) {
+		    free(regs);
+		    return TCL_ERROR;
+		}
 		if ( Tcl_ListObjGetElements(ip, regObjv[9], &sObjc, &sObjv) == TCL_ERROR ) {
+		    free(regs);
+		    return TCL_ERROR;
+		}
+
+		if ( sObjc != dObjc ) {
+		    Tcl_AddErrorInfo(ip, "dims and slice dimensions must match");
 		    free(regs);
 		    return TCL_ERROR;
 		}
 
 		if ( ndim < sObjc ) { ndim = sObjc; }
 
+		regs[i].axis[0].step = 1;
+
+		for ( s = 0; s <= NDIM; s++ ) {
+		    regs[i].offs[s] = regs[i].data;
+		}
+		for ( s = 0; s <  NDIM; s++ ) {
+		    regs[i].axis[s].star = 0;
+		    regs[i].axis[s].size = 0;
+		    regs[i].axis[s].incr = 0;
+		    regs[i].axis[s].step = 0;
+		    regs[i].axis[s].dims = 0;
+		}
+
+
 		for ( s = 0; s < sObjc; s++ ) {
 		    int       sliceObjc;
 		    Tcl_Obj **sliceObjv;
+
+		    if ( Tcl_GetIntFromObj(ip, dObjv[s], &thisInt ) == TCL_ERROR ) {
+			free(regs);
+			return TCL_ERROR;
+		    }
+		    regs[i].axis[s].dims = thisInt;
+
+		    if ( s ) { regs[i].axis[s].step = regs[i].axis[s-1].step * regs[i].axis[0].dims; }
 
 		    if ( Tcl_ListObjGetElements(ip, sObjv[s], &sliceObjc, &sliceObjv) == TCL_ERROR ) {
 			free(regs);
@@ -422,9 +508,16 @@ namespace eval tna {
 			return TCL_ERROR;
 		    }
 		    regs[i].axis[s].incr = thisInt;
+
+		    regs[i].offs[s] = regs[i].data;
 		}
 		
 		break;
+	     }
+	     default : {
+		Tcl_AddErrorInfo(ip, "unknown item type register");
+		free(regs);
+		return TCL_ERROR;
 	     }
 	    }
 	}
@@ -445,24 +538,21 @@ namespace eval tna {
 	    text[i] = thisInt;
 	}
 
-	for ( i = 0 ; i < nregs; i++ ) {
-	    int j;
-
-	    printf("%d\n", i);
-	    for ( j = 0; j < ndim; j++ ) {
-		printf("	%ld : %ld\n", regs[i].axis[j].star, regs[i].axis[j].size);
-	    }
-	}
 	{
 	    Machine m;
-	    Dim	    dims;
+	    Dim	    dims[NDIM];
 
-	    m.program   =  text;
-	    m.ni        = ntext;
+	    dims[0].start = 0;
+	    dims[0].end   = 3;
+	    dims[1].start = 0;
+	    dims[1].end   = 3;
+
+	    m.program   =  (Instruct *) text;
+	    m.ni        = ntext*sizeof(short)/sizeof(Instruct);
 	    m.registers = regs;
 	    m.nr        = nregs;
 
-	    m.dims	= &dims;
+	    m.dims	= dims;
 	    m.nd	= ndim;
 
 	    slice_run(&m, ndim);

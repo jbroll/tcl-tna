@@ -12,7 +12,8 @@ typedef struct _Axis {
 } Axis;
 
 typedef struct _Register {
-    long	 type;		/* data type			*/
+    int	 	 type;		/* data type			*/
+    int		 item;
     void	*data;		/* pointer to data 		*/
     union	 {
 	char	_char;
@@ -25,7 +26,7 @@ typedef struct _Register {
 	float	_float;
 	double	_double;
     } value;
-    void	*offs[NDIM];	/* Offset at this index level	*/
+    void	*offs[NDIM+1];	/* Offset at this index level	*/
     Axis	 axis[NDIM];
 } Register;
 
