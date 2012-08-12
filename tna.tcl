@@ -110,7 +110,7 @@ namespace eval tna {
 	#
 	critcl::cproc malloc_$type { long size } long [subst {
 	    void *buff = calloc(size*sizeof($ctype), 1);
-	    printf("malloc %p\\n", buff);
+	    //printf("malloc %p\\n", buff);
 
 	    return (long) buff;
 	}]
@@ -217,7 +217,7 @@ critcl::ccode [string map [list %TypeCases $::tna::TypeCases] {
 //			, r->axis[d].dims
 //			, r->axis[d].step
 //			, SizeOf[r->type]
-//		);
+//	);
     }
 }]
 
@@ -455,8 +455,6 @@ namespace eval tna {
 
 		if ( ndim < sObjc ) { ndim = sObjc; }
 
-		regs[i].axis[0].step = 1;
-
 		for ( s = 0; s <= NDIM; s++ ) {
 		    regs[i].offs[s] = regs[i].data;
 		}
@@ -467,6 +465,8 @@ namespace eval tna {
 		    regs[i].axis[s].step = 0;
 		    regs[i].axis[s].dims = 0;
 		}
+
+		regs[i].axis[0].step = 1;
 
 
 		for ( s = 0; s < sObjc; s++ ) {
@@ -501,7 +501,7 @@ namespace eval tna {
 			free(regs);
 			return TCL_ERROR;
 		    }
-		    regs[i].axis[s].size = thisInt - regs[i].axis[0].star;
+		    regs[i].axis[s].size = thisInt - regs[i].axis[0].star + 1;
 
 		    if ( Tcl_GetIntFromObj(ip, sliceObjv[2], &thisInt ) == TCL_ERROR ) {
 			free(regs);
