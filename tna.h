@@ -37,18 +37,12 @@ typedef struct _Instruct {
     short	r3;
 } Instruct;
 
-typedef struct _Dim {
-    int	start;
-    int	end;
-
-} Dim;
-
 typedef struct _Machine {
     int	   ni;
     Instruct *program;
     int    nr;
     Register *registers;
-    Dim    *dims;
+    int   *dims;
     int    nd;
 } Machine;
 

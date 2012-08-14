@@ -166,12 +166,15 @@ namespace eval tna {
 
 	lookup $name - - - -
 
-	set reg [tempreg {}]
-	set regs($reg) $regs($name)
+	set reg [tempreg int]
 
-	lset regs($reg) end [xindx [$name dims] $args]
+	foreach i { 1 2 4 6 7 8 } {
+	    lset regs(@$reg) $i [lindex $regs($name) $i]
+	}
 
-	return $reg
+	lset regs(@$reg) end [xindx [$name dims] $args]
+
+	return @$reg
     }
 
     proc assign { op a b } {
@@ -342,13 +345,20 @@ tna::array create C double 3 3
 
 set expr { C = A -= B + (3 + 6.0) }
 
-puts [tna::disassemble {*}[tna::compile $expr]]
+
+
+#puts [tna::disassemble {*}[tna::compile $expr]]
+
 #tna::print {*}[tna::compile $expr]
 tna::execute {*}[tna::compile $expr]
 
+#puts [tna::disassemble {*}[tna::compile { A[1,1] = 4.0 }]]
+
+tna::expr { A[1,1] = 4.0 }
+
 tna::print [A data] {*}[A dims]
+puts ""
 tna::print [C data] {*}[C dims]
 
 
-#tna::expr $expr
 

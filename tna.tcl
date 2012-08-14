@@ -210,14 +210,16 @@ critcl::ccode [string map [list %TypeCases $::tna::TypeCases] {
 		    *   r->axis[d].step
 		    *   SizeOf[r->type];
 
-//	printf("_off %p %d %p : %p, star %ld x %d incr %ld size %ld dims %ld step %ld type %d\n", r, d, r->offs[d], r->offs[d+1]
-//			, r->axis[d].star, x
-//			, r->axis[d].incr
-//			, r->axis[d].size
-//			, r->axis[d].dims
-//			, r->axis[d].step
-//			, SizeOf[r->type]
-//	);
+	    if ( 0 ) {
+		printf("_off %p %d %p : %p, star %ld x %d incr %ld size %ld dims %ld step %ld type %d\n", r, d, r->offs[d], r->offs[d+1]
+			, r->axis[d].star, x
+			, r->axis[d].incr
+			, r->axis[d].size
+			, r->axis[d].dims
+			, r->axis[d].step
+			, SizeOf[r->type]
+		      );
+	    }
     }
 }]
 
@@ -266,8 +268,8 @@ critcl::ccode {
 
 	dim--;
 
-	x  =     machine->dims[dim].start;
-	X1 = x + machine->dims[dim].end;
+	X1 = machine->dims[dim];
+
 	for ( X = 0; X < X1; ) {				// Run over the entire dimension
 	    if ( dim ) {
 		int i;
@@ -288,7 +290,6 @@ critcl::ccode {
 		    if ( R[instr->r1].axis[dim].size ) { bite = Min(bite, R[instr->r1].axis[dim].size); }
 		    if ( R[instr->r2].axis[dim].size ) { bite = Min(bite, R[instr->r2].axis[dim].size); }
 		    if ( R[instr->r3].axis[dim].size ) { bite = Min(bite, R[instr->r3].axis[dim].size); }
-
 
 		    for ( ; left > 0; left -= bite ) {	// Run at most the length of the smallest slice
 			bite = Min(rl, X1 - x);
@@ -332,8 +333,6 @@ namespace eval tna {
 
 	    int i, j;
 
-	    printf("print %p\n", data);
-
 	for ( j = 0; j < ny; j++ ) {
 	    for ( i = 0; i < ny; i++ ) {
 		printf(" %7.2f", data[j*nx+i]);
@@ -343,7 +342,7 @@ namespace eval tna {
     }
 
     critcl::cproc execute { Tcl_Interp* ip Tcl_Obj* regsList Tcl_Obj* textList } ok [template:subst {
-	int 	i, s;
+	int 	i, s, j;
 	int 	nregs;
 	int 	ntext;
 
@@ -540,12 +539,21 @@ namespace eval tna {
 
 	{
 	    Machine m;
-	    Dim	    dims[NDIM];
+	    int	    dims[NDIM];
+	    int	    ndim = 0;
 
-	    dims[0].start = 0;
-	    dims[0].end   = 3;
-	    dims[1].start = 0;
-	    dims[1].end   = 3;
+	    for ( j = 0; j < NDIM;  j++ ) {
+		dims[j] = 0;
+
+		for ( i = 0; i < nregs; i++ ) {
+		    if ( regs[i].item == DataRegister && dims[j] < regs[i].axis[j].size ) {
+			dims[j] = regs[i].axis[j].size;
+		    }
+		}
+		if ( dims[j] != 0 ) { ndim = j+1; }
+
+		printf("%d %d\n", j, dims[j]);
+	    }
 
 	    m.program   =  (Instruct *) text;
 	    m.ni        = ntext*sizeof(short)/sizeof(Instruct);
