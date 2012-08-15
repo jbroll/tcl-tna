@@ -35,7 +35,7 @@ oo::class create tna::value {
 namespace eval tna {
     set text {}
 
-    ::array set ItemsX { none 0 temp 1 const 2 tna 3 }
+    ::array set ItemsX { none 0 temp 1 const 2 tna 3 cntr 4 }
 
     proc xindx { dims indx } {			  # Parse the slice syntax into a list.
 	foreach d $dims x $indx {
@@ -108,9 +108,6 @@ namespace eval tna {
 	set slic {}
 	set item const
 
-	if { $name in { X Y Z T U V } } {
-	}
-
 	if { [info command $name] ne {} } {
 	    set data [$name data]
 	    set type [$name type]
@@ -123,10 +120,16 @@ namespace eval tna {
 	} elseif { [string is double $value] } {
 	    set type double
 	    set data $value
+	} elseif { $name in { X Y Z T U V } } {
+	   set type double
+	   set item cntr
+	   set data [::expr -([lsearch { X Y Z T U V } $name]+1)]
+	   puts "Name $name $data"
 	} else {
 	    error "unknown identifier : $name"
 	}
 
+	puts "set regs($name) [list $nreg $type $item $name $data : $ItemsX($item) $TypesX($type) $dims $slic]"
 	set regs($name) [list $nreg $type $item $name $data : $ItemsX($item) $TypesX($type) $dims $slic]
 	incr nreg
     }
@@ -322,6 +325,7 @@ namespace eval tna {
 	    switch $item {
 		none -
 		temp  { append listing [format " %4d  %-8s %-14s  %8s\n" $n $item $name $type] }
+		cntr -
 		const { append listing [format " %4d  %-8s %-14s  %8s	%f\n" $n $item $name $type $data] }
 		tna   { append listing [format " %4d  %-8s %-14s  %8s	0x%08x : %s %s\n" $n $item $name $type $data $dims $slice] }
 	    }
@@ -345,6 +349,10 @@ tna::array create A double 6 6
 tna::array create B int    3 3
 tna::array create C double 3 3 
 
+tna::expr { B = Y }
+tna::print [B data] {*}[B dims]
+
+exit
 tna::expr { C[0,0] = 1 }
 tna::expr { C[1,0] = 2 }
 tna::expr { C[2,0] = 3 }
@@ -355,7 +363,6 @@ tna::expr { C[0,2] = 7 }
 tna::expr { C[1,2] = 8 }
 tna::expr { C[2,2] = 9 }
 
-tna::expr { B = X }
 tna::expr { C += B + 5 }
 tna::expr { A = C }
 

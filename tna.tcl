@@ -402,10 +402,21 @@ namespace eval tna {
 #define TempRegister	1
 #define ValuRegister	2
 #define DataRegister	3
+#define CntrRegister	4
 
 
 	    switch ( itemType ) {
 	     case TempRegister: slice_reg(&regs[i], dataType);	 break;
+	     case CntrRegister:
+		if ( Tcl_GetLongFromObj( ip, regObjv[4], &data ) == TCL_ERROR ) {
+		    free(regs);
+		    return TCL_ERROR;
+		}
+		slice_val(&regs[i], dataType, (void *)&regs[i].value);
+		for ( j = 0; j < NDIM; j++ ) { regs[i].axis[j].size = data; }
+
+		break;
+
 	     case ValuRegister:
 		switch ( dataType ) {
 		    [: { type ctype pType   pFmt    getType getFunc } $::tna::Types {
