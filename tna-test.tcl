@@ -108,6 +108,9 @@ namespace eval tna {
 	set slic {}
 	set item const
 
+	if { $name in { X Y Z T U V } } {
+	}
+
 	if { [info command $name] ne {} } {
 	    set data [$name data]
 	    set type [$name type]
@@ -272,7 +275,9 @@ namespace eval tna {
 	return [list [lsort -real -index 0 [map { name values } [::array get regs] { I $values }]] $text]
     }
     proc expr { expr } {
-	::tna::execute {*}[compile $expr]
+	set xxx [compile $expr]
+	puts [::tna::disassemble {*}$xxx]
+	::tna::execute {*}$xxx
     }
 
     proc mprint { regs text } {
@@ -336,29 +341,27 @@ namespace eval tna {
     }
 }
 
-tna::array create A double 3 3 
+tna::array create A double 6 6
 tna::array create B int    3 3
 tna::array create C double 3 3 
 
-#tna::print {*}[tna::compile { A[1,1] = B }]
+tna::expr { C[0,0] = 1 }
+tna::expr { C[1,0] = 2 }
+tna::expr { C[2,0] = 3 }
+tna::expr { C[0,1] = 4 }
+tna::expr { C[1,1] = 5 }
+tna::expr { C[2,1] = 6 }
+tna::expr { C[0,2] = 7 }
+tna::expr { C[1,2] = 8 }
+tna::expr { C[2,2] = 9 }
 
+tna::expr { B = X }
+tna::expr { C += B + 5 }
+tna::expr { A = C }
 
-set expr { C = A -= B + (3 + 6.0) }
-
-
-
-#puts [tna::disassemble {*}[tna::compile $expr]]
-
-#tna::print {*}[tna::compile $expr]
-tna::execute {*}[tna::compile $expr]
-
-#puts [tna::disassemble {*}[tna::compile { A[1,1] = 4.0 }]]
-
-tna::expr { A[1,1] = 4.0 }
-
-tna::print [A data] {*}[A dims]
-puts ""
 tna::print [C data] {*}[C dims]
+puts ""
+tna::print [A data] {*}[A dims]
 
 
 

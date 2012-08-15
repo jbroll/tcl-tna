@@ -14,6 +14,7 @@ typedef struct _Axis {
 typedef struct _Register {
     int	 	 type;		/* data type			*/
     int		 item;
+    int		 used;
     void	*data;		/* pointer to data 		*/
     union	 {
 	char	_char;

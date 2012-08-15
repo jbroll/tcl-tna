@@ -141,9 +141,9 @@ critcl::ccode {
     #define R3 *addr3
 
     #define INCR		\
-	if ( i1 ) { addr1++; }	\
-	if ( i2 ) { addr2++; }	\
-	if ( i3 ) { addr3++; }
+	if ( i1 > 1 ) { addr1++; }	\
+	if ( i2 > 1 ) { addr2++; }	\
+	if ( i3 > 1 ) { addr3++; }
 
     #define INSTR(name, type1, type2, type3 , expr) 						\
 	void static name(int n, Register *r1, Register *r2, Register *r3) {			\
@@ -156,8 +156,8 @@ critcl::ccode {
 	    int	i2 = r2->axis[0].size;								\
 	    int	i3 = r3->axis[0].size;								\
 												\
-	    while ( n >= RLEN ) { for ( i = 0; i <  RLEN; i++ ) { expr; INCR } n -= RLEN; }	\
-	    while ( n >=    8 ) { for ( i = 0; i <     8; i++ ) { expr; INCR }  n -=   8; }	\
+	    while ( n >= RLEN ) { for ( i = 0; i <  RLEN; i++ ) { expr; INCR } n -= RLEN; }     \
+	    while ( n >=    8 ) { for ( i = 0; i <     8; i++ ) { expr; INCR } n -=    8; }     \
 												\
 	    while ( n ) { expr;   n--; INCR }							\
 	}
@@ -211,7 +211,8 @@ critcl::ccode [string map [list %TypeCases $::tna::TypeCases] {
 		    *   SizeOf[r->type];
 
 	    if ( 0 ) {
-		printf("_off %p %d %p : %p, star %ld x %d incr %ld size %ld dims %ld step %ld type %d\n", r, d, r->offs[d], r->offs[d+1]
+		printf("_off %p %d %p : %p, star %ld x %d incr %ld size %ld dims %ld step %ld type %d\n"
+			, r, d, r->data, r->offs[d]
 			, r->axis[d].star, x
 			, r->axis[d].incr
 			, r->axis[d].size
@@ -287,12 +288,17 @@ critcl::ccode {
 		    int bite = rl;
 		    bite     = Min(rl, X1 - x);
 
-		    if ( R[instr->r1].axis[dim].size ) { bite = Min(bite, R[instr->r1].axis[dim].size); }
-		    if ( R[instr->r2].axis[dim].size ) { bite = Min(bite, R[instr->r2].axis[dim].size); }
-		    if ( R[instr->r3].axis[dim].size ) { bite = Min(bite, R[instr->r3].axis[dim].size); }
+		    if ( R[instr->r1].axis[dim].size > 1 ) { bite = Min(bite, R[instr->r1].axis[dim].size); }
+		    if ( R[instr->r2].axis[dim].size > 1 ) { bite = Min(bite, R[instr->r2].axis[dim].size); }
+		    if ( R[instr->r3].axis[dim].size > 1 ) { bite = Min(bite, R[instr->r3].axis[dim].size); }
+
+		    //printf("R1 %d\n", R[instr->r1].axis[dim].size);
+		    //printf("R2 %d\n", R[instr->r2].axis[dim].size);
+		    //printf("R3 %d\n", R[instr->r3].axis[dim].size);
+		    //printf("Bite : %d\n", bite);
 
 		    for ( ; left > 0; left -= bite ) {	// Run at most the length of the smallest slice
-			bite = Min(rl, X1 - x);
+			bite = Min(bite, X1 - x);
 
 			slice_off(&R[instr->r1], 0, x);
 			slice_off(&R[instr->r2], 0, x);
@@ -370,7 +376,7 @@ namespace eval tna {
 	//
 	if ( Tcl_ListObjGetElements(ip, regsList, &nregs, &regsObjv) == TCL_ERROR ) { return TCL_ERROR; }
 
-	regs = malloc(sizeof(Register) * nregs);
+	regs = calloc(nregs, sizeof(Register));
 
 	for ( i = 0; i < nregs; i++ ) {
 	    int	     leng;
@@ -465,8 +471,6 @@ namespace eval tna {
 		    regs[i].axis[s].dims = 0;
 		}
 
-		regs[i].axis[0].step = 1;
-
 
 		for ( s = 0; s < sObjc; s++ ) {
 		    int       sliceObjc;
@@ -478,7 +482,9 @@ namespace eval tna {
 		    }
 		    regs[i].axis[s].dims = thisInt;
 
-		    if ( s ) { regs[i].axis[s].step = regs[i].axis[s-1].step * regs[i].axis[0].dims; }
+		    if ( s ) { regs[i].axis[s].step = regs[i].axis[s-1].step * regs[i].axis[s-1].dims;
+		    } else   { regs[i].axis[s].step = 1; }
+
 
 		    if ( Tcl_ListObjGetElements(ip, sObjv[s], &sliceObjc, &sliceObjv) == TCL_ERROR ) {
 			free(regs);
@@ -500,7 +506,7 @@ namespace eval tna {
 			free(regs);
 			return TCL_ERROR;
 		    }
-		    regs[i].axis[s].size = thisInt - regs[i].axis[0].star + 1;
+		    regs[i].axis[s].size = thisInt - regs[i].axis[s].star + 1;
 
 		    if ( Tcl_GetIntFromObj(ip, sliceObjv[2], &thisInt ) == TCL_ERROR ) {
 			free(regs);
@@ -533,8 +539,11 @@ namespace eval tna {
 		free(regs);
 		return TCL_ERROR;
 	    }
-
 	    text[i] = thisInt;
+
+	    if ( i % 4 ) {
+		regs[text[i]].used = 1;
+	    }
 	}
 
 	{
@@ -546,13 +555,11 @@ namespace eval tna {
 		dims[j] = 0;
 
 		for ( i = 0; i < nregs; i++ ) {
-		    if ( regs[i].item == DataRegister && dims[j] < regs[i].axis[j].size ) {
+		    if ( regs[i].used && regs[i].item == DataRegister && dims[j] < regs[i].axis[j].size ) {
 			dims[j] = regs[i].axis[j].size;
 		    }
 		}
 		if ( dims[j] != 0 ) { ndim = j+1; }
-
-		printf("%d %d\n", j, dims[j]);
 	    }
 
 	    m.program   =  (Instruct *) text;
