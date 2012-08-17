@@ -80,30 +80,15 @@ namespace eval tna {
 	lassign $regs($name) reg typ itm dat
     }
 
-    proc tempreg { type { value {} } } {
-	variable ItemsX
-	variable TypesX
+    proc tempreg { type } {
+	set reg   [incr ::tna::nreg]
+	set name @$reg
 
-	variable regs
-	variable nreg
-
-	set reg   $nreg
-	set name @$nreg
-	set data $value
-
-
-	set regs($name) [list $nreg $type temp $name temp : $ItemsX(temp) $TypesX($type) {} {}]
-	incr nreg
+	set ::tna::regs($name) [list $reg $type temp $name temp : $::tna::ItemsX(temp) $::tna::TypesX($type) {} {}]
 
 	return $reg
     }
     proc register { name value { type {} } } {
-	variable TypesX
-	variable ItemsX
-
-	variable nreg
-	variable regs
-
 	set dims {}
 	set slic {}
 	set item const
@@ -121,22 +106,20 @@ namespace eval tna {
 	    set type double
 	    set data $value
 	} elseif { $name in { X Y Z T U V } } {
-	   set type double
+	   set type int
 	   set item cntr
 	   set data [::expr -([lsearch { X Y Z T U V } $name]+1)]
-	   puts "Name $name $data"
 	} else {
 	    error "unknown identifier : $name"
 	}
 
-	puts "set regs($name) [list $nreg $type $item $name $data : $ItemsX($item) $TypesX($type) $dims $slic]"
-	set regs($name) [list $nreg $type $item $name $data : $ItemsX($item) $TypesX($type) $dims $slic]
-	incr nreg
+	set ::tna::regs($name) 	\
+	    [list [incr ::tna::nreg] $type $item $name $data : $::tna::ItemsX($item) $::tna::TypesX($type) $dims $slic]
+	#puts "set regs($name) $::tna::regs($name)"
     }
 
 
     proc promote { c regc typec args } {
-	variable OpcodesX
 	variable text
 
 	upvar $c C
@@ -153,7 +136,7 @@ namespace eval tna {
 
 	    if { $type ne $typeC } {
 		set N [tempreg $typeC]
-		lappend text $OpcodesX(tna_opcode_${type}_${typeC}) $reg 0 $N
+		lappend text $::tna::OpcodesX(tna_opcode_${type}_${typeC}) $reg 0 $N
 	    } else {
 		set N $reg
 	    }
@@ -184,12 +167,17 @@ namespace eval tna {
     }
 
     proc assign { op a b } {
-	variable OpcodesX
 	variable regs
 	variable text
 	
 	lookup $a regA typeA - -
 	lookup $b regB typeB - -
+
+	if { $b eq "X" } {						# Add X register fixup
+	    set tmp [tempreg $typeB]
+	    lappend text $::tna::OpcodesX(tna_opcode_xxx_$typeB) $regB 0 $tmp
+	    set regB $tmp
+	}
 
 	# If the types are the same and the target is a tmp register,
 	# change the target of the previous instr
@@ -197,7 +185,7 @@ namespace eval tna {
 	if { $typeA eq $typeB && [info exists regs(@[lindex $text end])] } {
 	    lset text end $regA						
 	} else {
-	    lappend text $OpcodesX(tna_opcode_${typeB}_$typeA) $regB 0 $regA
+	    lappend text $::tna::OpcodesX(tna_opcode_${typeB}_$typeA) $regB 0 $regA
 	}
 
 	return $a
@@ -246,6 +234,17 @@ namespace eval tna {
 	lookup $a regA typeA itemA dataA
 	lookup $b regB typeB itemB dataB
 
+	if { $a eq "X" } {					  # X register fixup
+	    set tmp [tempreg $typeA]
+	    lappend text $OpcodesX(tna_opcode_xxx_$typeA) $regA 0 $tmp
+	    set regA $tmp
+	}
+	if { $b eq "X" } {					  # X register fixup
+	    set tmp [tempreg $typeB]
+	    lappend text $OpcodesX(tna_opcode_xxx_$typeB) $regB 0 $tmp
+	    set regB $tmp
+	}
+
 	if { $itemA eq "const" && $itemB eq "const" } {		; # Try constant folding
 	    set c [::expr "\$dataA $::expression::opers($op) \$dataB"]
 
@@ -264,7 +263,7 @@ namespace eval tna {
 
     proc compile { expr } {
 	variable regs
-	variable nreg  1
+	variable nreg  0
 	variable text {}
 
 	variable ItemsX
@@ -343,14 +342,16 @@ namespace eval tna {
 
 	return $listing
     }
+
+    proc print { x } { xprint [$x data] $::tna::TypesX([$x type]) {*}[$x dims] }
 }
 
 tna::array create A double 6 6
 tna::array create B int    3 3
 tna::array create C double 3 3 
 
-tna::expr { B = Y }
-tna::print [B data] {*}[B dims]
+tna::expr { C = X*Y+X }
+tna::print C
 
 exit
 tna::expr { C[0,0] = 1 }

@@ -126,7 +126,7 @@ namespace eval tna {
 	# For use in the body of slice_offs
 	#
 	critcl::ccode "#define TNA_TYPE_$type $i"
-	append TypeCases "case TNA_TYPE_$type:	(*($ctype   *)r->offs) = x;	break;\n"
+	append TypeCases "case TNA_TYPE_$type:	r->value._$type = x;	break;\n"
 
 	incr i
     }
@@ -198,6 +198,8 @@ critcl::ccode [string map [list %TypeCases $::tna::TypeCases] {
 	if ( r->axis[d].size == -(d+1) ) {
 	    switch ( r->type ) {			// Slice index access from a typed Value register.
 		%TypeCases
+		default: printf("Unknown register type %d\n", r->type);
+			 break;
 	    }
 	}
 
@@ -334,14 +336,17 @@ namespace eval tna {
 	    Tcl_ObjSetVar2(ip, tnaOpcodes, opname, opcode, TCL_GLOBAL_ONLY);
 	}
     }
-    critcl::cproc print { long Data int nx int ny }  void {
-	    double *data = (double *) Data;
+    critcl::cproc xprint { long Data int type int nx int ny }  void {
+	    void *data = (double *) Data;
 
 	    int i, j;
 
 	for ( j = 0; j < ny; j++ ) {
 	    for ( i = 0; i < ny; i++ ) {
-		printf(" %7.2f", data[j*nx+i]);
+		switch ( type ) {
+		 case TNA_TYPE_double: printf(" %7.2f", ((double *) data)[j*nx+i]); break;
+		 case TNA_TYPE_int:    printf("   %7d", ((int    *) data)[j*nx+i]); break;
+		}
 	    }
 	    printf("\n");
 	}
@@ -412,6 +417,7 @@ namespace eval tna {
 		    free(regs);
 		    return TCL_ERROR;
 		}
+
 		slice_val(&regs[i], dataType, (void *)&regs[i].value);
 		for ( j = 0; j < NDIM; j++ ) { regs[i].axis[j].size = data; }
 
