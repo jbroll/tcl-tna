@@ -7,6 +7,35 @@ package require tna
 
 source expression.tcl
 
+proc timer { op args } {
+    	upvar #0 Timer Timer
+
+    if { $args ne {} } {
+	set now [expr [clock clicks -milliseconds]/1000.0]
+
+	foreach name $args {
+	    if { ![info exists Timer($name)] } { set Timer($name) 0 }
+
+	    switch $op {
+		start { set Timer($name,start) $now }
+		stop  { 
+		    set Timer($name) [expr { $Timer($name) + ($now - $Timer($name,start)) }]
+		    unset Timer($name,start)
+		}
+	    }
+	}
+	return $Timer($name)
+    } else {
+	if { [info exists Timer($op,start)] } {
+	    set now [expr [clock clicks -milliseconds]/1000.0]
+
+	    return [expr { $Timer($op) + ($now - $Timer($op,start)) }]
+	} else {
+	    return $Timer($op)
+	}
+    }
+}
+
 oo::class create tna::array {
     variable type dims data
     accessor type dims data
@@ -33,8 +62,6 @@ oo::class create tna::value {
 }
 
 namespace eval tna {
-    set text {}
-
     ::array set ItemsX { none 0 temp 1 const 2 tna 3 cntr 4 }
 
     proc xindx { dims indx } {			  # Parse the slice syntax into a list.
@@ -52,9 +79,9 @@ namespace eval tna {
 		lassign $indx s e i
 
 
-		if { $s eq {} || $s eq "*" } { set s  0 	      }
-		if { $e eq {}              } { set e [::expr $d-1]  }
-		if { $i eq {}              } { set i  1 	      }
+		if { $s eq {} || $s eq "*" } { set s  0 	   }
+		if { $e eq {}              } { set e [::expr $d-1] }
+		if { $i eq {}              } { set i  1 	   }
 
 		if { $s < 0 } { set s [::expr $d+$s] }
 		if { $e < 0 } { set e [::expr $d+$e] }
@@ -136,7 +163,7 @@ namespace eval tna {
 
 	    if { $type ne $typeC } {
 		set N [tempreg $typeC]
-		lappend text $::tna::OpcodesX(tna_opcode_${type}_${typeC}) $reg 0 $N
+		lappend text [list $::tna::OpcodesX(tna_opcode_${type}_${typeC}) $reg 0 $N]
 	    } else {
 		set N $reg
 	    }
@@ -175,17 +202,17 @@ namespace eval tna {
 
 	if { $b eq "X" } {						# Add X register fixup
 	    set tmp [tempreg $typeB]
-	    lappend text $::tna::OpcodesX(tna_opcode_xxx_$typeB) $regB 0 $tmp
+	    lappend text [list $::tna::OpcodesX(tna_opcode_xxx_$typeB) $regB 0 $tmp]
 	    set regB $tmp
 	}
 
 	# If the types are the same and the target is a tmp register,
 	# change the target of the previous instr
 	#
-	if { $typeA eq $typeB && [info exists regs(@[lindex $text end])] } {
-	    lset text end $regA						
+	if { $typeA eq $typeB && [info exists regs(@[lindex $text end end])] } {
+	    lset text end end $regA						
 	} else {
-	    lappend text $::tna::OpcodesX(tna_opcode_${typeB}_$typeA) $regB 0 $regA
+	    lappend text [list $::tna::OpcodesX(tna_opcode_${typeB}_$typeA) $regB 0 $regA]
 	}
 
 	return $a
@@ -235,14 +262,22 @@ namespace eval tna {
 	lookup $b regB typeB itemB dataB
 
 	if { $a eq "X" } {					  # X register fixup
-	    set tmp [tempreg $typeA]
-	    lappend text $OpcodesX(tna_opcode_xxx_$typeA) $regA 0 $tmp
-	    set regA $tmp
+	    if { $::tna::X eq {} } {
+		set tmp [tempreg $typeA]
+		lappend text [list $OpcodesX(tna_opcode_xxx_$typeA) $regA 0 $tmp]
+		set ::tna::X [set regA $tmp]
+	    } else {
+		set regA $::tna::X
+	    }
 	}
 	if { $b eq "X" } {					  # X register fixup
-	    set tmp [tempreg $typeB]
-	    lappend text $OpcodesX(tna_opcode_xxx_$typeB) $regB 0 $tmp
-	    set regB $tmp
+	    if { $::tna::X eq {} } {
+		set tmp [tempreg $typeB]
+		lappend text [list $OpcodesX(tna_opcode_xxx_$typeB) $regB 0 $tmp]
+		set ::tna::X [set regB $tmp]
+	    } else {
+		set regB $::tna::X
+	    }
 	}
 
 	if { $itemA eq "const" && $itemB eq "const" } {		; # Try constant folding
@@ -253,7 +288,7 @@ namespace eval tna {
 	    return $c
 	} else {
 	    promote C regC typeC $regA $typeA A $regB $typeB B
-	    lappend text $OpcodesX(tna_opcode_${op}_$typeC) $A $B $regC
+	    lappend text [list $OpcodesX(tna_opcode_${op}_$typeC) $A $B $regC]
 
 	    return $C
 	}
@@ -263,14 +298,12 @@ namespace eval tna {
 
     proc compile { expr } {
 	variable regs
-	variable nreg  0
+	variable    X {}
 	variable text {}
-
-	variable ItemsX
-	variable TypesX
+	variable nreg  0
 
 	::array unset regs
-	set regs(0) [list 0 0 @0 0 0 : $ItemsX(const) $TypesX(int) {} {}]
+	set regs(0) [list 0 0 @0 0 0 : $::tna::ItemsX(const) $::tna::TypesX(int) {} {}]
 
 	expression::parse $expr [expression::prep-tokens $::expression::optable] $::expression::optable ::tna::Compile
 
@@ -324,7 +357,7 @@ namespace eval tna {
 	    switch $item {
 		none -
 		temp  { append listing [format " %4d  %-8s %-14s  %8s\n" $n $item $name $type] }
-		cntr -
+		cntr  { append listing [format " %4d  %-8s %-14s  %8s	%d\n" $n $item $name $type $data] }
 		const { append listing [format " %4d  %-8s %-14s  %8s	%f\n" $n $item $name $type $data] }
 		tna   { append listing [format " %4d  %-8s %-14s  %8s	0x%08x : %s %s\n" $n $item $name $type $data $dims $slice] }
 	    }
@@ -335,7 +368,9 @@ namespace eval tna {
 	append listing	"# Text\n"
 	append listing	"#\n"
 	set n 0
-	foreach { I R0 R1 R2 } $text {
+	foreach { instr } $text {
+	    lassign $instr I R0 R1 R2
+
 	    append listing [format " %4d  %25s  %10s %10s %10s\n"	\
 	    	[incr n] $OpcodesR($I) [lindex $regs $R0 3] [lindex $regs $R1 3] [lindex $regs $R2 3]]
 	}
@@ -346,12 +381,61 @@ namespace eval tna {
     proc print { x } { xprint [$x data] $::tna::TypesX([$x type]) {*}[$x dims] }
 }
 
+
+#timer start A
+
+#tna::array create a double [expr 1024*1024] 1
+#tna::array create b double [expr 1024*1024] 1
+#tna::array create c double [expr 1024*1024] 1
+
+tna::array create a double 2048 2048
+tna::array create b double 2048 2048
+tna::array create c double 2048 2048
+
+#tna::array create J double 1 1
+
+#puts [timer A]
+
+#tna::expr { a   = 1 }
+#tna::expr { J  += a }
+
+
+
+#tna::print J
+
+
+#timer start B
+#set xxx [::tna::compile { c = a*a + b*b + 2.0 * a * b }]
+#puts [timer B]
+
+#puts [::tna::disassemble {*}$xxx]
+
+#timer start B
+#::tna::execute {*}$xxx
+#puts [timer B]
+
+tna::expr { a = X+Y }
+tna::expr { b = 2 }
+
+foreach i [iota 1 100] {
+    tna::expr { c = a*a + b*b + 2.0 * a * b }
+}
+
+#puts [timer A]
+exit
+
+
+
 tna::array create A double 6 6
-tna::array create B int    3 3
+tna::array create B int    4 4
 tna::array create C double 3 3 
 
-tna::expr { C = X*Y+X }
-tna::print C
+#tna::expr { C = X*X+X }
+#tna::print C
+
+tna::expr { B += D }
+
+tna::print B
 
 exit
 tna::expr { C[0,0] = 1 }
@@ -370,6 +454,3 @@ tna::expr { A = C }
 tna::print [C data] {*}[C dims]
 puts ""
 tna::print [A data] {*}[A dims]
-
-
-

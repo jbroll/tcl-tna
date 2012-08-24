@@ -32,14 +32,14 @@ typedef struct _Register {
 } Register;
 
 typedef struct _Instruct {
-    short	opcode;
-    short	r1;
-    short	r2;
-    short	r3;
+    short		opcode;
+    unsigned char	size;
+    unsigned char	r1;
+    unsigned char	r2;
+    unsigned char	r3;
 } Instruct;
 
 typedef struct _Machine {
-    int	   ni;
     Instruct *program;
     int    nr;
     Register *registers;
@@ -48,7 +48,7 @@ typedef struct _Machine {
 } Machine;
 
 
-typedef void OpFunc(int n, Register *r1, Register *r2, Register *r3);
+typedef void OpFunc(Instruct *ip, int n, Register *r1, Register *r2, Register *r3);
 
 typedef struct _OpTable {
     OpFunc     *func;

@@ -5,14 +5,14 @@ critcl::tsources tna.tcl	 			; # This file is a tcl source file for the package.
 critcl::tsources tcloo.tcl template.tcl functional.tcl	; # Helpers
 critcl::cheaders tna.h 
 
-critcl::cflags -O3
+critcl::cflags -O3 -fopenmp
 critcl::clibraries -lm
 
 source tcloo.tcl
 source template.tcl
 
 namespace eval tna {
-    set regsize 1024
+    set regsize 512
 
     # This array defines the types available in the package.
     #
@@ -32,7 +32,7 @@ namespace eval tna {
     set IntOnly { mod band bor bxor bnot shr shl }
 
     set Opcodes {
-	mod	{ R3 = R1 %  R2; 	}
+	mod	{ R3 = R1 %  R2 	}
 	band	{ R3 = R1 &  R2; 	}
 	bor 	{ R3 = R1 |  R2; 	}
 	bxor	{ R3 = R1 ^  R2; 	}
@@ -140,26 +140,24 @@ critcl::ccode {
     #define R2 *addr2
     #define R3 *addr3
 
-    #define INCR		\
-	if ( i1 > 1 ) { addr1++; }	\
-	if ( i2 > 1 ) { addr2++; }	\
-	if ( i3 > 1 ) { addr3++; }
+      #define INCR	\
+	addr1 += i1;	\
+	addr2 += i2;	\
+	addr3 += i3;
 
     #define INSTR(name, type1, type2, type3 , expr) 						\
-	void static name(int n, Register *r1, Register *r2, Register *r3) {			\
+	int static name(Instruct ip, int n, Register *r1, Register *r2, Register *r3) {	\
 	    type1	*addr1 = (type1 *)r1->offs[0];						\
 	    type2	*addr2 = (type2 *)r2->offs[0];						\
 	    type3	*addr3 = (type3 *)r3->offs[0];						\
-	    int	 i;										\
 												\
-	    int	i1 = r1->axis[0].size;								\
-	    int	i2 = r2->axis[0].size;								\
-	    int	i3 = r3->axis[0].size;								\
+	    int	i1 = r1->axis[0].size > 1;							\
+	    int	i2 = r2->axis[0].size > 1;							\
+	    int	i3 = r3->axis[0].size > 1;							\
 												\
-	    while ( n >= RLEN ) { for ( i = 0; i <  RLEN; i++ ) { expr; INCR } n -= RLEN; }     \
-	    while ( n >=    8 ) { for ( i = 0; i <     8; i++ ) { expr; INCR } n -=    8; }     \
-												\
-	    while ( n ) { expr;   n--; INCR }							\
+	    for ( ; n; n-- ) { expr; INCR }							\
+	    											\
+	    return 2;										\
 	}
 }
 critcl::ccode [subst {
@@ -259,14 +257,14 @@ critcl::ccode {
 
     void slice_run(Machine *machine, int dim)
     {
-	    Instruct *program = machine->program;
-	    int       ni = machine->ni;
+	    short *program = machine->program;
 	    Register *R  = machine->registers;
 	    int       nr = machine->nr;
 
 	    int rl;
 	    int x, X;
 	    int X1;
+	    short    *ip;
 	    Instruct *instr;
 
 	dim--;
@@ -285,7 +283,8 @@ critcl::ccode {
 		int rl = Min(RLEN, X1 - X);
 
 		x = X;
-		for ( instr = program; ni--; instr++ ) {	// Execute the instructions one bank at a time
+
+		for ( instr = program; instr->opcode; instr++ ) {	// Execute the instructions one bank at a time
 		    int left = rl;
 		    int bite = rl;
 		    bite     = Min(rl, X1 - x);
@@ -306,7 +305,9 @@ critcl::ccode {
 			slice_off(&R[instr->r2], 0, x);
 			slice_off(&R[instr->r3], 0, x);
 
-			OpCodes[instr->opcode].func(bite
+			OpCodes[instr->opcode].func(
+				  instr
+				, bite
 				, &R[instr->r1]
 				, &R[instr->r2]
 				, &R[instr->r3]);
@@ -344,8 +345,15 @@ namespace eval tna {
 	for ( j = 0; j < ny; j++ ) {
 	    for ( i = 0; i < ny; i++ ) {
 		switch ( type ) {
-		 case TNA_TYPE_double: printf(" %7.2f", ((double *) data)[j*nx+i]); break;
+		 case TNA_TYPE_char:   printf("   %7d", ((char   *) data)[j*nx+i]); break;
+		 case TNA_TYPE_uchar:  printf("   %7d", ((uchar  *) data)[j*nx+i]); break;
+		 case TNA_TYPE_short:  printf("   %7d", ((short  *) data)[j*nx+i]); break;
+		 case TNA_TYPE_ushort: printf("   %7d", ((ushort *) data)[j*nx+i]); break;
 		 case TNA_TYPE_int:    printf("   %7d", ((int    *) data)[j*nx+i]); break;
+		 case TNA_TYPE_uint:   printf("   %7d", ((uint   *) data)[j*nx+i]); break;
+		 case TNA_TYPE_long:   printf("  %7ld", ((long   *) data)[j*nx+i]); break;
+		 case TNA_TYPE_float:  printf(" %7.2f", ((float  *) data)[j*nx+i]); break;
+		 case TNA_TYPE_double: printf(" %7.2f", ((double *) data)[j*nx+i]); break;
 		}
 	    }
 	    printf("\n");
@@ -366,7 +374,7 @@ namespace eval tna {
 
 	Register*regs;
 
-	short	*text;
+	Instruct *text;
 	int	 thisInt;
 	long	 thisLong;
 
@@ -546,17 +554,43 @@ namespace eval tna {
 
 	// Convert the textList into an array of shorts.
 	//
-	if ( Tcl_ListObjGetElements(ip, textList, &ntext, &textObjv) == TCL_ERROR ) { return TCL_ERROR; }
+	if ( Tcl_ListObjGetElements(ip, textList, &ntext, &textObjv) == TCL_ERROR ) {
+	    free(regs);
+	    return TCL_ERROR;
+	}
 
-	text = malloc(sizeof(short) * ntext);
+
+	text = calloc(ntext+1, sizeof(short)*2);
 
 	for ( i = 0; i < ntext; i++ ) {
-	    if ( Tcl_GetIntFromObj(ip, textObjv[i], &thisInt) == TCL_ERROR ) {
+	        int j;
+		int       iObjc;
+		Tcl_Obj **iObjv;
+
+		unsigned char *r = &text[i].r1;
+
+	    if ( Tcl_ListObjGetElements(ip, textObjv[i], &iObjc, &iObjv) == TCL_ERROR ) {
 		free(text);
 		free(regs);
 		return TCL_ERROR;
 	    }
-	    text[i] = thisInt;
+
+	    if ( Tcl_GetIntFromObj(ip, iObjv[0], &thisInt) == TCL_ERROR ) {
+		free(text);
+		free(regs);
+		return TCL_ERROR;
+	    }
+	    text[i].opcode = thisInt;
+
+	    for ( j = 0; j < 3; j++ ) {
+		if ( Tcl_GetIntFromObj(ip, iObjv[j+1], &thisInt) == TCL_ERROR ) {
+		    free(text);
+		    free(regs);
+		    return TCL_ERROR;
+		}
+		r[j] = thisInt;
+	    }
+	    text[i].size = 3;
 
 	    if ( i % 4 ) {
 		regs[text[i]].used = 1;
@@ -580,7 +614,6 @@ namespace eval tna {
 	    }
 
 	    m.program   =  (Instruct *) text;
-	    m.ni        = ntext*sizeof(short)/sizeof(Instruct);
 	    m.registers = regs;
 	    m.nr        = nregs;
 

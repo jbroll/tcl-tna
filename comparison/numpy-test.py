@@ -1,7 +1,7 @@
 
 import numpy as np
 
-nx = 1024
+nx = 2048
 
 a = np.ones([nx, nx], dtype=np.double) + 1
 b = np.ones([nx, nx], dtype=np.double) + 4

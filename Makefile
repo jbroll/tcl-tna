@@ -1,6 +1,6 @@
 
 tna:
-	critcl3.kit -force -pkg tna
+	critcl3.kit -force -pkg tna 
 
 
 
