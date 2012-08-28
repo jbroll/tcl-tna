@@ -48,7 +48,7 @@ typedef struct _Machine {
 } Machine;
 
 
-typedef void OpFunc(Instruct *ip, int n, Register *r1, Register *r2, Register *r3);
+typedef int OpFunc(Instruct *ip, int n, Register *r1, Register *r2, Register *r3);
 
 typedef struct _OpTable {
     OpFunc     *func;

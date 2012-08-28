@@ -5,7 +5,7 @@ critcl::tsources tna.tcl	 			; # This file is a tcl source file for the package.
 critcl::tsources tcloo.tcl template.tcl functional.tcl	; # Helpers
 critcl::cheaders tna.h 
 
-critcl::cflags -O3 -fopenmp
+critcl::cflags -O3
 critcl::clibraries -lm
 
 source tcloo.tcl
@@ -16,17 +16,17 @@ namespace eval tna {
 
     # This array defines the types available in the package.
     #
-    #       tnaType CType         	pType	pFmt	getType	getFunc
+    #       tnaType CType         	pType	pFmt	getType	getFunc			scan
     set Types {
-	      char  char              	int     %d 	int	Tcl_GetIntFromObj
-	     uchar "unsigned char"    	int     %d 	int	Tcl_GetIntFromObj 
-	     short  short		int     %d 	int	Tcl_GetIntFromObj 
-	    ushort "unsigned short"	int     %d 	int	Tcl_GetIntFromObj 
-	       int  int 		int     %d 	int	Tcl_GetIntFromObj 
-	      uint "unsigned int"	long    %u 	long	Tcl_GetLongFromObj 
-	      long  long		long   %ld 	long	Tcl_GetLongFromObj 
-	     float  float		double  %f 	double	Tcl_GetDoubleFromObj 
-	    double  double		double  %f 	double	Tcl_GetDoubleFromObj 
+	      char  char              	int     %d 	int	Tcl_GetIntFromObj	c
+	     uchar "unsigned char"    	int     %d 	int	Tcl_GetIntFromObj	c 
+	     short  short		int     %d 	int	Tcl_GetIntFromObj	s 
+	    ushort "unsigned short"	int     %d 	int	Tcl_GetIntFromObj	s 
+	       int  int 		int     %d 	int	Tcl_GetIntFromObj	i
+	      uint "unsigned int"	long    %u 	long	Tcl_GetLongFromObj	i 
+	      long  long		long   %ld 	long	Tcl_GetLongFromObj	w 
+	     float  float		double  %f 	double	Tcl_GetDoubleFromObj	f 
+	    double  double		double  %f 	double	Tcl_GetDoubleFromObj	d 
     }
 
     set IntOnly { mod band bor bxor bnot shr shl }
@@ -78,7 +78,7 @@ namespace eval tna {
     proc opcodes {} {
 	set opcodes {}
 
-	foreach { type CType  pType   pFmt    getType getFunc } $tna::Types {
+	foreach { type CType  pType   pFmt    getType getFunc scan } $tna::Types {
 	    foreach { name code } $::tna::Opcodes {
 		set T $type
 
@@ -88,7 +88,7 @@ namespace eval tna {
 		lappend opcodes $name $T $type $code
 	    }
 
-	    foreach { type2 CType pType   pFmt    getType getFunc } $::tna::Types {
+	    foreach { type2 CType pType   pFmt    getType getFunc scan } $::tna::Types {
 		lappend opcodes $type $type $type2 { R3 = R1 }
 	    }
 	}
@@ -104,10 +104,11 @@ namespace eval tna {
     critcl::ccode "#define RLEN $regsize"
 
     set i 1
-    foreach { type ctype pType   pFmt    getType getFunc } $::tna::Types { 
+    foreach { type ctype pType   pFmt    getType getFunc scan } $::tna::Types { 
 
 	# Create a proc to allocate memory, and return the sizeof each type
 	#
+	critcl::cproc sizeof_$type {} int [subst { return sizeof($ctype); }]
 	critcl::cproc malloc_$type { long size } long [subst {
 	    void *buff = calloc(size*sizeof($ctype), 1);
 	    //printf("malloc %p\\n", buff);
@@ -146,7 +147,7 @@ critcl::ccode {
 	addr3 += i3;
 
     #define INSTR(name, type1, type2, type3 , expr) 						\
-	int static name(Instruct ip, int n, Register *r1, Register *r2, Register *r3) {	\
+	int static name(Instruct *ip, int n, Register *r1, Register *r2, Register *r3) {	\
 	    type1	*addr1 = (type1 *)r1->offs[0];						\
 	    type2	*addr2 = (type2 *)r2->offs[0];						\
 	    type3	*addr3 = (type3 *)r3->offs[0];						\
@@ -171,7 +172,7 @@ critcl::ccode [subst {
     };
 
     int SizeOf\[] = {
-	0 [: { type ctype pType   pFmt    getType getFunc } $::tna::Types { , sizeof($type) }]
+	0 [: { type ctype pType   pFmt    getType getFunc scan } $::tna::Types { , sizeof($type) }]
     };
 }]
 
@@ -284,7 +285,7 @@ critcl::ccode {
 
 		x = X;
 
-		for ( instr = program; instr->opcode; instr++ ) {	// Execute the instructions one bank at a time
+		for ( instr = program; instr->opcode; ((short *)instr) += instr->size ) {	// Execute the instructions one bank at a time
 		    int left = rl;
 		    int bite = rl;
 		    bite     = Min(rl, X1 - x);
@@ -304,6 +305,8 @@ critcl::ccode {
 			slice_off(&R[instr->r1], 0, x);
 			slice_off(&R[instr->r2], 0, x);
 			slice_off(&R[instr->r3], 0, x);
+
+			//printf("%d %d %d %d\n", instr->opcode, instr->r1, instr->r2, instr->r3);
 
 			OpCodes[instr->opcode].func(
 				  instr
@@ -433,7 +436,7 @@ namespace eval tna {
 
 	     case ValuRegister:
 		switch ( dataType ) {
-		    [: { type ctype pType   pFmt    getType getFunc } $::tna::Types {
+		    [: { type ctype pType   pFmt    getType getFunc scan } $::tna::Types {
 
 		     case TNA_TYPE_$type: {
 			$getType this;
@@ -560,7 +563,7 @@ namespace eval tna {
 	}
 
 
-	text = calloc(ntext+1, sizeof(short)*2);
+	text = calloc(ntext+1, sizeof(Instruct));
 
 	for ( i = 0; i < ntext; i++ ) {
 	        int j;
@@ -581,19 +584,16 @@ namespace eval tna {
 		return TCL_ERROR;
 	    }
 	    text[i].opcode = thisInt;
+	    text[i].size = 1 + (iObjc+1)/2;
 
-	    for ( j = 0; j < 3; j++ ) {
+	    for ( j = 0; j < iObjc-1; j++ ) {
 		if ( Tcl_GetIntFromObj(ip, iObjv[j+1], &thisInt) == TCL_ERROR ) {
 		    free(text);
 		    free(regs);
 		    return TCL_ERROR;
 		}
 		r[j] = thisInt;
-	    }
-	    text[i].size = 3;
-
-	    if ( i % 4 ) {
-		regs[text[i]].used = 1;
+		regs[thisInt].used = 1;
 	    }
 	}
 
@@ -625,6 +625,12 @@ namespace eval tna {
 
 	return TCL_OK;
     }]
+
+    critcl::cproc bytes { Tcl_Interp* ip long data int size } ok {
+	Tcl_SetObjResult(ip, Tcl_NewByteArrayObj(data, size));
+
+	return TCL_OK;
+    }
 }
 
 
@@ -632,8 +638,9 @@ namespace eval tna {
 if { [::critcl::compiled] } {
     ::tna::opcodesX
     set i 0
-    foreach { tnaType CType pType pFmt getType getFunc } $::tna::Types {
+    foreach { tnaType CType pType pFmt getType getFunc scan } $::tna::Types {
 	set ::tna::TypesX($tnaType) [incr i]
+	set ::tna::TypesScan($tnaType) $scan
     }
 }
 
