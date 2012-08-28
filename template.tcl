@@ -39,7 +39,7 @@ proc template:switch { value cases } {
 }
 
 proc template:subst { string } {
-    subst [string map { \\ \\\\ [! [ [: [: [* [* [? [? [ \\[ } $string]
+    uplevel [list subst [string map { \\ \\\\ [! [ [: [: [* [* [? [? [ \\[ } $string]]
 }
 
 

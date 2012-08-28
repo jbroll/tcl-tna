@@ -10,6 +10,7 @@ critcl::clibraries -lm
 
 source tcloo.tcl
 source template.tcl
+source functional.tcl
 
 namespace eval tna {
     set regsize 512
@@ -96,15 +97,7 @@ namespace eval tna {
 	return $opcodes
     }
 
-    critcl::ccode {
-	#include <stdlib.h>
-	#include <stdio.h>
-	#include <math.h>
-    }
-    critcl::ccode "#define RLEN $regsize"
-
-    set i 1
-    foreach { type ctype pType   pFmt    getType getFunc scan } $::tna::Types { 
+    foreach { type ctype pType   pFmt    getType getFunc scan } $::tna::Types i [iota 1 [expr [llength $::tna::Types]/7]] { 
 
 	# Create a proc to allocate memory, and return the sizeof each type
 	#
@@ -128,55 +121,22 @@ namespace eval tna {
 	#
 	critcl::ccode "#define TNA_TYPE_$type $i"
 	append TypeCases "case TNA_TYPE_$type:	r->value._$type = x;	break;\n"
-
-	incr i
     }
 }
 
-critcl::ccode {
+critcl::ccode [template:subst {
+    #include <stdlib.h>
+    #include <stdio.h>
+    #include <math.h>
+
+    #define RLEN $::tna::regsize
 
     #include "/Users/john/src/tna/tna.h"		/* The cheaders directive above didn't seem to take?	*/
 
-    #define R1 *addr1
-    #define R2 *addr2
-    #define R3 *addr3
-
-      #define INCR	\
-	addr1 += i1;	\
-	addr2 += i2;	\
-	addr3 += i3;
-
-    #define INSTR(name, type1, type2, type3 , expr) 						\
-	int static name(Instruct *ip, int n, Register *r1, Register *r2, Register *r3) {	\
-	    type1	*addr1 = (type1 *)r1->offs[0];						\
-	    type2	*addr2 = (type2 *)r2->offs[0];						\
-	    type3	*addr3 = (type3 *)r3->offs[0];						\
-												\
-	    int	i1 = r1->axis[0].size > 1;							\
-	    int	i2 = r2->axis[0].size > 1;							\
-	    int	i3 = r3->axis[0].size > 1;							\
-												\
-	    for ( ; n; n-- ) { expr; INCR }							\
-	    											\
-	    return 2;										\
-	}
-}
-critcl::ccode [subst {
-    [: { name type type2 code } [tna::opcodes] {
-	    INSTR(tna_opcode_${name}_${type2}, $type, $type, $type2, $code)
-    }]
-
-    OpTable OpCodes\[] = {
-	{ NULL, "nop" }
-	[: { name type type2 code } [tna::opcodes] {	, { tna_opcode_${name}_${type2}, "tna_opcode_${name}_${type2}" }\n}]
-    };
-
-    int SizeOf\[] = {
+    int SizeOf[] = {
 	0 [: { type ctype pType   pFmt    getType getFunc scan } $::tna::Types { , sizeof($type) }]
     };
-}]
 
-critcl::ccode [string map [list %TypeCases $::tna::TypeCases] {
     rprint(Register *r, int n) {
 	int i;
 
@@ -193,39 +153,6 @@ critcl::ccode [string map [list %TypeCases $::tna::TypeCases] {
 	}
     }
 
-    void slice_off(Register *r, int d, int x) {
-	if ( r->axis[d].size == -(d+1) ) {
-	    switch ( r->type ) {			// Slice index access from a typed Value register.
-		%TypeCases
-		default: printf("Unknown register type %d\n", r->type);
-			 break;
-	    }
-	}
-
-	if ( r->axis[d].size <= 0 ) { return; }		// no need to adjust offset of a Value or temp register.
-
-	r->offs[d] = ((char *)r->offs[d+1])		// Adjust offset into Array type.
-		    + ((r->axis[d].star+((x*r->axis[d].incr)
-		    %   r->axis[d].size))
-		    %   r->axis[d].dims)
-		    *   r->axis[d].step
-		    *   SizeOf[r->type];
-
-	    if ( 0 ) {
-		printf("_off %p %d %p : %p, star %ld x %d incr %ld size %ld dims %ld step %ld type %d\n"
-			, r, d, r->data, r->offs[d]
-			, r->axis[d].star, x
-			, r->axis[d].incr
-			, r->axis[d].size
-			, r->axis[d].dims
-			, r->axis[d].step
-			, SizeOf[r->type]
-		      );
-	    }
-    }
-}]
-
-critcl::ccode {
     void slice_val(Register *r, int type, void *value) 
     {
 	    int i;
@@ -255,6 +182,76 @@ critcl::ccode {
 	r->axis[0].step = 1;
     }
 
+    void slice_off(Register *r, int d, int x) {
+	if ( r->axis[d].size == -(d+1) ) {
+	    switch ( r->type ) {			// Slice index access from a typed Value register.
+		$::tna::TypeCases
+		default: printf("Unknown register type %d\n", r->type);
+			 break;
+	    }
+	}
+
+	if ( r->axis[d].size <= 0 ) { return; }		// no need to adjust offset of a Value or temp register.
+
+	r->offs[d] = ((char *)r->offs[d+1])		// Adjust offset into Array type.
+		    + ((r->axis[d].star+((x*r->axis[d].incr)
+		    %   r->axis[d].size))
+		    %   r->axis[d].dims)
+		    *   r->axis[d].step
+		    *   SizeOf[r->type];
+
+	    if ( 0 ) {
+		printf("_off %p %d %p : %p, star %ld x %d incr %ld size %ld dims %ld step %ld type %d\n"
+			, r, d, r->data, r->offs[d]
+			, r->axis[d].star, x
+			, r->axis[d].incr
+			, r->axis[d].size
+			, r->axis[d].dims
+			, r->axis[d].step
+			, SizeOf[r->type]
+		      );
+	    }
+    }
+
+
+    #define R1 *addr1
+    #define R2 *addr2
+    #define R3 *addr3
+
+      #define INCR	\
+	addr1 += i1;	\
+	addr2 += i2;	\
+	addr3 += i3;
+
+    #define INSTR(name, type1, type2, type3 , expr) 						\
+	int static name(Instruct *ip, int n, Register *r1, Register *r2, Register *r3) {	\
+	    type1	*addr1 = (type1 *)r1->offs[0];						\
+	    type2	*addr2 = (type2 *)r2->offs[0];						\
+	    type3	*addr3 = (type3 *)r3->offs[0];						\
+												\
+	    int	i1 = r1->axis[0].size > 1;							\
+	    int	i2 = r2->axis[0].size > 1;							\
+	    int	i3 = r3->axis[0].size > 1;							\
+												\
+	    for ( ; n; n-- ) { expr; INCR }							\
+	    											\
+	    return 2;										\
+	}
+
+}]
+critcl::ccode [subst {
+    [: { name type type2 code } [tna::opcodes] {
+	    INSTR(tna_opcode_${name}_${type2}, $type, $type, $type2, $code)
+    }]
+
+    OpTable OpCodes\[] = {
+	{ NULL, "nop" }
+	[: { name type type2 code } [tna::opcodes] {	, { tna_opcode_${name}_${type2}, "tna_opcode_${name}_${type2}" }\n}]
+    };
+
+}]
+
+critcl::ccode {
 
     void slice_run(Machine *machine, int dim)
     {
@@ -324,8 +321,6 @@ critcl::ccode {
 	    }
 	}
     }
-
-
 }
 
 namespace eval tna {
@@ -632,8 +627,6 @@ namespace eval tna {
 	return TCL_OK;
     }
 }
-
-
 
 if { [::critcl::compiled] } {
     ::tna::opcodesX
