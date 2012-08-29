@@ -6,26 +6,27 @@ lappend auto_path lib
 package require tna
 source tna-tcl.tcl
 
+tna::debug 0
 
 tna::array create a double 2048 2048
 tna::array create b double 2048 2048
 tna::array create c double 2048 2048
+tna::value create d double 0
 
 tna::expr { a = X+Y }
 tna::expr { b = 2 }
 
-foreach i [iota 1 1] {
+foreach i [iota 1 100] {
     tna::expr { c = a*a + b*b + 2.0 * a * b }
 }
-
-tna::value create d double 0
-
 tna::expr { d = c[0,0] }
-tna::expr { d += c[0:1, 0:1] }
+
+#tna::expr { d =  2 }
 
 puts [d list]
 
 exit
+
 
 
 

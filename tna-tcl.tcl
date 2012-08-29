@@ -44,7 +44,7 @@ oo::class create tna::value {
 
     constructor { Type args } {
 	set type $Type
-	set dims { 0 0 0 0 0 }
+	set dims { 1 }
 
 	set size 1
 	set data  [tna::malloc_$type $size]
@@ -54,6 +54,9 @@ oo::class create tna::value {
 
 namespace eval tna {
     ::array set ItemsX { none 0 temp 1 const 2 tna 3 cntr 4 }
+
+    set reglist {}
+    set debug    0
 
     proc xindx { dims indx } {			  # Parse the slice syntax into a list.
 	foreach d $dims x $indx {
@@ -98,13 +101,24 @@ namespace eval tna {
 	lassign $regs($name) reg typ itm dat
     }
 
-    proc tempreg { type } {
-	set reg   [incr ::tna::nreg]
-	set name @$reg
+    proc tempreg { type { regtype temp } } {
+	if { [llength $::tna::reglist] == 0 } {
+	    set reg   [incr ::tna::nreg]
+	    set name @$reg
+	} else {
+	    set name [lindex $::tna::reglist end]
+	    set ::tna::reglist [lrange $::tna::reglist 0 end-1]
+	    set reg [string range $name 1 end]
+	}
 
-	set ::tna::regs($name) [list $reg $type temp $name temp : $::tna::ItemsX(temp) $::tna::TypesX($type) {} {}]
+	set ::tna::regs($name) [list $reg $type $regtype $name $regtype : $::tna::ItemsX(temp) $::tna::TypesX($type) {} {}]
 
 	return $reg
+    }
+    proc dispose { name } {
+	if { [string index $name 0] eq "@" && [lindex $::tna::regs($name) 2] eq "temp" } {
+	    lappend ::tna::reglist $name
+	}
     }
     proc register { name value { type {} } } {
 	set dims {}
@@ -155,6 +169,7 @@ namespace eval tna {
 	    if { $type ne $typeC } {
 		set N [tempreg $typeC]
 		lappend text [list $::tna::OpcodesX(tna_opcode_${type}_${typeC}) $reg 0 $N]
+		dispose $reg
 	    } else {
 		set N $reg
 	    }
@@ -192,8 +207,9 @@ namespace eval tna {
 	lookup $b regB typeB - -
 
 	if { $b eq "X" } {						# Add X register fixup
-	    set tmp [tempreg $typeB]
+	    set tmp [tempreg $typeB cx]
 	    lappend text [list $::tna::OpcodesX(tna_opcode_xxx_$typeB) $regB 0 $tmp]
+	    set ::tna::X [set regB $tmp]
 	    set regB $tmp
 	}
 
@@ -254,7 +270,7 @@ namespace eval tna {
 
 	if { $a eq "X" } {					  # X register fixup
 	    if { $::tna::X eq {} } {
-		set tmp [tempreg $typeA]
+		set tmp [tempreg $typeA cx]
 		lappend text [list $OpcodesX(tna_opcode_xxx_$typeA) $regA 0 $tmp]
 		set ::tna::X [set regA $tmp]
 	    } else {
@@ -263,7 +279,7 @@ namespace eval tna {
 	}
 	if { $b eq "X" } {					  # X register fixup
 	    if { $::tna::X eq {} } {
-		set tmp [tempreg $typeB]
+		set tmp [tempreg $typeB cx]
 		lappend text [list $OpcodesX(tna_opcode_xxx_$typeB) $regB 0 $tmp]
 		set ::tna::X [set regB $tmp]
 	    } else {
@@ -279,6 +295,8 @@ namespace eval tna {
 	    return $c
 	} else {
 	    promote C regC typeC $regA $typeA A $regB $typeB B
+	    dispose $a
+	    dispose $b
 	    lappend text [list $OpcodesX(tna_opcode_${op}_$typeC) $A $B $regC]
 
 	    return $C
@@ -288,23 +306,30 @@ namespace eval tna {
     proc Compile { op args } { return [$op $op {*}$args] }
 
     proc compile { expr } {
-	variable regs
-	variable    X {}
-	variable text {}
-	variable nreg  0
 
-	::array unset regs
-	set regs(0) [list 0 0 @0 0 0 : $::tna::ItemsX(const) $::tna::TypesX(int) {} {}]
+	if { ![info exists ::tna::cache($expr)] } {
+	    variable regs
+	    variable    X {}
+	    variable text {}
+	    variable nreg  0
+	    variable reglist {}
 
-	expression::parse $expr [expression::prep-tokens $::expression::optable] $::expression::optable ::tna::Compile
+	    ::array unset regs
+	    set regs(0) [list 0 0 @0 0 0 : $::tna::ItemsX(const) $::tna::TypesX(int) {} {}]
 
-	return [list [lsort -real -index 0 [map { name values } [::array get regs] { I $values }]] $text]
+	    expression::parse $expr [expression::prep-tokens $::expression::optable] $::expression::optable ::tna::Compile
+
+	    set ::tna::cache($expr) [list [lsort -real -index 0 [map { name values } [::array get regs] { I $values }]] $text]
+	}
+
+	return $::tna::cache($expr)
     }
     proc expr { expr } {
 	set xxx [compile $expr]
-	#puts [::tna::disassemble {*}$xxx]
+	if { $::tna::debug } { puts [::tna::disassemble {*}$xxx] }
 	::tna::execute {*}$xxx
     }
+    proc debug { x } { set ::tna::debug $x }
 
     proc mprint { regs text } {
 	puts [join $regs \n]
@@ -347,6 +372,7 @@ namespace eval tna {
 
 	    switch $item {
 		none -
+		cx    -
 		temp  { append listing [format " %4d  %-8s %-14s  %8s\n" $n $item $name $type] }
 		cntr  { append listing [format " %4d  %-8s %-14s  %8s	%d\n" $n $item $name $type $data] }
 		const { append listing [format " %4d  %-8s %-14s  %8s	%f\n" $n $item $name $type $data] }

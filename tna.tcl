@@ -122,208 +122,205 @@ namespace eval tna {
 	critcl::ccode "#define TNA_TYPE_$type $i"
 	append TypeCases "case TNA_TYPE_$type:	r->value._$type = x;	break;\n"
     }
-}
 
-critcl::ccode [template:subst {
-    #include <stdlib.h>
-    #include <stdio.h>
-    #include <math.h>
+    critcl::ccode [template:subst {
+	#include <stdlib.h>
+	#include <stdio.h>
+	#include <math.h>
 
-    #define RLEN $::tna::regsize
+	#define RLEN $::tna::regsize
 
-    #include "/Users/john/src/tna/tna.h"		/* The cheaders directive above didn't seem to take?	*/
+	#include "/Users/john/src/tna/tna.h"		/* The cheaders directive above didn't seem to take?	*/
 
-    int SizeOf[] = {
-	0 [: { type ctype pType   pFmt    getType getFunc scan } $::tna::Types { , sizeof($type) }]
-    };
+	int SizeOf[] = {
+	    0 [: { type ctype pType   pFmt    getType getFunc scan } $::tna::Types { , sizeof($type) }]
+	};
 
-    rprint(Register *r, int n) {
-	int i;
-
-	printf("%p data %p item %d type %d sizeof %d\n"
-		, r
-		, r->data
-		, r->item
-		, r->type
-		, SizeOf[r->type]
-	    );
-	for ( i = 0; i <= n; i++ ) {
-	    printf("	star %ld size %ld incr %ld dims %ld step %ld		%p\n"
-		, r->axis[i].star, r->axis[i].size, r->axis[i].incr, r->axis[i].dims, r->axis[i].step, r->offs[i]);
-	}
-    }
-
-    void slice_val(Register *r, int type, void *value) 
-    {
+	rprint(Register *r, int n) {
 	    int i;
 
-	r->type = type;
-	r->data = value;
-
-	for ( i = 0; i < NDIM; i++ ) {
-	    r->offs[i] = value;
-	    r->axis[i].star = 0;
-	    r->axis[i].incr = 0;
-	    r->axis[i].size = 0;
-	    r->axis[i].dims = 0;
-	    r->axis[i].step = 0;
-	}
-	r->offs[i] = value;
-    }
-
-    void slice_reg(Register *r, int type)
-    {
-	slice_val(r, type, malloc(RLEN * 8));
-
-	r->axis[0].star = 0;
-	r->axis[0].incr = 1;
-	r->axis[0].size = RLEN;
-	r->axis[0].dims = RLEN;
-	r->axis[0].step = 1;
-    }
-
-    void slice_off(Register *r, int d, int x) {
-	if ( r->axis[d].size == -(d+1) ) {
-	    switch ( r->type ) {			// Slice index access from a typed Value register.
-		$::tna::TypeCases
-		default: printf("Unknown register type %d\n", r->type);
-			 break;
+	    printf("%p data %p item %d type %d sizeof %d\n"
+		    , r
+		    , r->data
+		    , r->item
+		    , r->type
+		    , SizeOf[r->type]
+		);
+	    for ( i = 0; i <= n; i++ ) {
+		printf("	star %ld size %ld incr %ld dims %ld step %ld		%p\n"
+		    , r->axis[i].star, r->axis[i].size, r->axis[i].incr, r->axis[i].dims, r->axis[i].step, r->offs[i]);
 	    }
 	}
 
-	if ( r->axis[d].size <= 0 ) { return; }		// no need to adjust offset of a Value or temp register.
-
-	r->offs[d] = ((char *)r->offs[d+1])		// Adjust offset into Array type.
-		    + ((r->axis[d].star+((x*r->axis[d].incr)
-		    %   r->axis[d].size))
-		    %   r->axis[d].dims)
-		    *   r->axis[d].step
-		    *   SizeOf[r->type];
-
-	    if ( 0 ) {
-		printf("_off %p %d %p : %p, star %ld x %d incr %ld size %ld dims %ld step %ld type %d\n"
-			, r, d, r->data, r->offs[d]
-			, r->axis[d].star, x
-			, r->axis[d].incr
-			, r->axis[d].size
-			, r->axis[d].dims
-			, r->axis[d].step
-			, SizeOf[r->type]
-		      );
-	    }
-    }
-
-
-    #define R1 *addr1
-    #define R2 *addr2
-    #define R3 *addr3
-
-      #define INCR	\
-	addr1 += i1;	\
-	addr2 += i2;	\
-	addr3 += i3;
-
-    #define INSTR(name, type1, type2, type3 , expr) 						\
-	int static name(Instruct *ip, int n, Register *r1, Register *r2, Register *r3) {	\
-	    type1	*addr1 = (type1 *)r1->offs[0];						\
-	    type2	*addr2 = (type2 *)r2->offs[0];						\
-	    type3	*addr3 = (type3 *)r3->offs[0];						\
-												\
-	    int	i1 = r1->axis[0].size > 1;							\
-	    int	i2 = r2->axis[0].size > 1;							\
-	    int	i3 = r3->axis[0].size > 1;							\
-												\
-	    for ( ; n; n-- ) { expr; INCR }							\
-	    											\
-	    return 2;										\
-	}
-
-}]
-critcl::ccode [subst {
-    [: { name type type2 code } [tna::opcodes] {
-	    INSTR(tna_opcode_${name}_${type2}, $type, $type, $type2, $code)
-    }]
-
-    OpTable OpCodes\[] = {
-	{ NULL, "nop" }
-	[: { name type type2 code } [tna::opcodes] {	, { tna_opcode_${name}_${type2}, "tna_opcode_${name}_${type2}" }\n}]
-    };
-
-}]
-
-critcl::ccode {
-
-    void slice_run(Machine *machine, int dim)
-    {
-	    short *program = machine->program;
-	    Register *R  = machine->registers;
-	    int       nr = machine->nr;
-
-	    int rl;
-	    int x, X;
-	    int X1;
-	    short    *ip;
-	    Instruct *instr;
-
-	dim--;
-
-	X1 = machine->dims[dim];
-
-	for ( X = 0; X < X1; ) {				// Run over the entire dimension
-	    if ( dim ) {
+	void slice_val(Register *r, int type, void *value) 
+	{
 		int i;
 
-		for ( i = 0; i < nr; i++ ) { slice_off(&R[i], dim, X); }
+	    r->type = type;
+	    r->data = value;
 
-		slice_run(machine, dim);
-		X++;
-	    } else {
-		int rl = Min(RLEN, X1 - X);
+	    for ( i = 0; i < NDIM; i++ ) {
+		r->offs[i] = value;
+		r->axis[i].star = 0;
+		r->axis[i].incr = 0;
+		r->axis[i].size = 0;
+		r->axis[i].dims = 0;
+		r->axis[i].step = 0;
+	    }
+	    r->offs[i] = value;
+	}
 
-		x = X;
+	void slice_reg(Register *r, int type)
+	{
+	    slice_val(r, type, malloc(RLEN * 8));
 
-		for ( instr = program; instr->opcode; ((short *)instr) += instr->size ) {	// Execute the instructions one bank at a time
-		    int left = rl;
-		    int bite = rl;
-		    bite     = Min(rl, X1 - x);
+	    r->axis[0].star = 0;
+	    r->axis[0].incr = 1;
+	    r->axis[0].size = RLEN;
+	    r->axis[0].dims = RLEN;
+	    r->axis[0].step = 1;
+	}
 
-		    if ( R[instr->r1].axis[dim].size > 1 ) { bite = Min(bite, R[instr->r1].axis[dim].size); }
-		    if ( R[instr->r2].axis[dim].size > 1 ) { bite = Min(bite, R[instr->r2].axis[dim].size); }
-		    if ( R[instr->r3].axis[dim].size > 1 ) { bite = Min(bite, R[instr->r3].axis[dim].size); }
-
-		    //printf("R1 %d\n", R[instr->r1].axis[dim].size);
-		    //printf("R2 %d\n", R[instr->r2].axis[dim].size);
-		    //printf("R3 %d\n", R[instr->r3].axis[dim].size);
-		    //printf("Bite : %d\n", bite);
-
-		    for ( ; left > 0; left -= bite ) {	// Run at most the length of the smallest slice
-			bite = Min(bite, X1 - x);
-
-			slice_off(&R[instr->r1], 0, x);
-			slice_off(&R[instr->r2], 0, x);
-			slice_off(&R[instr->r3], 0, x);
-
-			//printf("%d %d %d %d\n", instr->opcode, instr->r1, instr->r2, instr->r3);
-
-			OpCodes[instr->opcode].func(
-				  instr
-				, bite
-				, &R[instr->r1]
-				, &R[instr->r2]
-				, &R[instr->r3]);
-
-			x   += bite;
-		    } 
-		    x = X;
+	void slice_off(Register *r, int d, int x) {
+	    if ( r->axis[d].size == -(d+1) ) {
+		switch ( r->type ) {			// Slice index access from a typed Value register.
+		    $::tna::TypeCases
+		    default: printf("Unknown register type %d\n", r->type);
+			     break;
 		}
+	    }
 
-		X += rl;
+	    if ( r->axis[d].size <= 0 ) { return; }		// no need to adjust offset of a Value or temp register.
+
+	    r->offs[d] = ((char *)r->offs[d+1])		// Adjust offset into Array type.
+			+ ((r->axis[d].star+((x*r->axis[d].incr)
+			%   r->axis[d].size))
+			%   r->axis[d].dims)
+			*   r->axis[d].step
+			*   SizeOf[r->type];
+
+		if ( 0 ) {
+		    printf("_off %p %d %p : %p, star %ld x %d incr %ld size %ld dims %ld step %ld type %d\n"
+			    , r, d, r->data, r->offs[d]
+			    , r->axis[d].star, x
+			    , r->axis[d].incr
+			    , r->axis[d].size
+			    , r->axis[d].dims
+			    , r->axis[d].step
+			    , SizeOf[r->type]
+			  );
+		}
+	}
+
+
+	#define R1 *addr1
+	#define R2 *addr2
+	#define R3 *addr3
+
+	  #define INCR	\
+	    addr1 += i1;	\
+	    addr2 += i2;	\
+	    addr3 += i3;
+
+	#define INSTR(name, type1, type2, type3 , expr) 					\
+	    int static name(Instruct *ip, int n, Register *r1, Register *r2, Register *r3) {	\
+		type1	*addr1 = (type1 *)r1->offs[0];						\
+		type2	*addr2 = (type2 *)r2->offs[0];						\
+		type3	*addr3 = (type3 *)r3->offs[0];						\
+												\
+		int	i1 = r1->axis[0].size > 1;						\
+		int	i2 = r2->axis[0].size > 1;						\
+		int	i3 = r3->axis[0].size > 1;						\
+												\
+		for ( ; n; n-- ) { expr; INCR }							\
+												\
+		return 2;									\
+	    }
+    }]
+    critcl::ccode [subst {
+	[: { name type type2 code } [tna::opcodes] {
+		INSTR(tna_opcode_${name}_${type2}, $type, $type, $type2, $code)
+	}]
+
+	OpTable OpCodes\[] = {
+	    { NULL, "nop" }
+	    [: { name type type2 code } [tna::opcodes] {	, { tna_opcode_${name}_${type2}, "tna_opcode_${name}_${type2}" }\n}]
+	};
+
+    }]
+
+    critcl::ccode {
+
+	void slice_run(Machine *machine, int dim)
+	{
+		short *program = machine->program;
+		Register *R  = machine->registers;
+		int       nr = machine->nr;
+
+		int rl;
+		int x, X;
+		int X1;
+		short    *ip;
+		Instruct *instr;
+
+	    dim--;
+
+	    X1 = machine->dims[dim];
+
+	    for ( X = 0; X < X1; ) {				// Run over the entire dimension
+		if ( dim ) {
+		    int i;
+
+		    for ( i = 0; i < nr; i++ ) { slice_off(&R[i], dim, X); }
+
+		    slice_run(machine, dim);
+		    X++;
+		} else {
+		    int rl = Min(RLEN, X1 - X);
+
+		    x = X;
+
+		    for ( instr = program; instr->opcode; ((short *)instr) += instr->size ) {	// Execute the instructions one bank at a time
+			int left = rl;
+			int bite = rl;
+			bite     = Min(rl, X1 - x);
+
+			if ( R[instr->r1].axis[dim].size > 1 ) { bite = Min(bite, R[instr->r1].axis[dim].size); }
+			if ( R[instr->r2].axis[dim].size > 1 ) { bite = Min(bite, R[instr->r2].axis[dim].size); }
+			if ( R[instr->r3].axis[dim].size > 1 ) { bite = Min(bite, R[instr->r3].axis[dim].size); }
+
+			//printf("R1 %d\n", R[instr->r1].axis[dim].size);
+			//printf("R2 %d\n", R[instr->r2].axis[dim].size);
+			//printf("R3 %d\n", R[instr->r3].axis[dim].size);
+			//printf("Bite : %d\n", bite);
+
+			for ( ; left > 0; left -= bite ) {	// Run at most the length of the smallest slice
+			    bite = Min(bite, X1 - x);
+
+			    slice_off(&R[instr->r1], 0, x);
+			    slice_off(&R[instr->r2], 0, x);
+			    slice_off(&R[instr->r3], 0, x);
+
+			    //printf("%d %d %d %d\n", instr->opcode, instr->r1, instr->r2, instr->r3);
+
+			    OpCodes[instr->opcode].func(
+				      instr
+				    , bite
+				    , &R[instr->r1]
+				    , &R[instr->r2]
+				    , &R[instr->r3]);
+
+			    x   += bite;
+			} 
+			x = X;
+		    }
+
+		    X += rl;
+		}
 	    }
 	}
     }
-}
 
-namespace eval tna {
     critcl::cproc opcodesX { Tcl_Interp* ip } void {
 	int i;
 	Tcl_Obj *tnaOpcodes = Tcl_NewStringObj("::tna::OpcodesX", -1);
@@ -626,15 +623,14 @@ namespace eval tna {
 
 	return TCL_OK;
     }
-}
 
-if { [::critcl::compiled] } {
-    ::tna::opcodesX
-    set i 0
-    foreach { tnaType CType pType pFmt getType getFunc scan } $::tna::Types {
-	set ::tna::TypesX($tnaType) [incr i]
-	set ::tna::TypesScan($tnaType) $scan
+    if { [::critcl::compiled] } {
+	::tna::opcodesX
+	set i 0
+	foreach { tnaType CType pType pFmt getType getFunc scan } $::tna::Types {
+	    set ::tna::TypesX($tnaType) [incr i]
+	    set ::tna::TypesScan($tnaType) $scan
+	}
     }
 }
-
 
