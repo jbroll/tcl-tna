@@ -5,20 +5,27 @@ oo::class create tna::thing {
     variable type dims data size
 
     method list-helper { bytes dims offs } {
+
+	set d [lindex $dims 0]
+		
 	if { [llength $dims] == 1 } {
-	    binary scan $bytes x$offs$::tna::TypesScan($type)[lindex $dims 0] row;  return $row
+	    for { set i 0 } { $i < $d } { incr i } {
+		binary scan $bytes x$offs$::tna::TypesScan($type)[lindex $dims 0] row;  return $row
+	    }    
 	} else {
-	    set d [lindex $dims 0]
 
 	    for { set i 0 } { $i < $d } { incr i } {
 		lappend reply [my list-helper $bytes [lrange $dims 1 end] $offs]
+
+		set sum [::tna::sizeof_$type]
+		incr offs [red x [lrange $dims 1 end] { set sum [::expr { $sum*$x }] }]
 	    }
 	}
 
 	return $reply
     }
 
-    method bytes {} { tna::bytes $data [expr $size*[tna::sizeof_$type]] }
+    method bytes {} { tna::bytes $data [::expr $size*[tna::sizeof_$type]] }
 }
 oo::class create tna::array {
     variable type dims data size
@@ -53,10 +60,31 @@ oo::class create tna::value {
 }
 
 namespace eval tna {
+    set debug    0
+
+    set regsize 512
+
+    set  Axes { X Y Z U V }		; # The names of the axis index variables
+    set nAxes [llength $Axes]
+
+    # This array defines the types available in the package.
+    #
+    #       tnaType CType         	pType	pFmt	getType	getFunc			scan
+    set Types {
+	      char  char              	int     %d 	int	Tcl_GetIntFromObj	c
+	     uchar "unsigned char"    	int     %d 	int	Tcl_GetIntFromObj	c 
+	     short  short		int     %d 	int	Tcl_GetIntFromObj	s 
+	    ushort "unsigned short"	int     %d 	int	Tcl_GetIntFromObj	s 
+	       int  int 		int     %d 	int	Tcl_GetIntFromObj	i
+	      uint "unsigned int"	long    %u 	long	Tcl_GetLongFromObj	i 
+	      long "long"		long   %ld 	long	Tcl_GetLongFromObj	i 
+	     float  float		double  %f 	double	Tcl_GetDoubleFromObj	f 
+	    double  double		double  %f 	double	Tcl_GetDoubleFromObj	d 
+    }
+
     ::array set ItemsX { none 0 temp 1 const 2 tna 3 cntr 4 }
 
     set reglist {}
-    set debug    0
 
     proc xindx { dims indx } {			  # Parse the slice syntax into a list.
 	foreach d $dims x $indx {
@@ -137,10 +165,10 @@ namespace eval tna {
 	} elseif { [string is double $value] } {
 	    set type double
 	    set data $value
-	} elseif { $name in { X Y Z T U V } } {
+	} elseif { $name in $::tna::Axes } {
 	   set type int
 	   set item cntr
-	   set data [::expr -([lsearch { X Y Z T U V } $name]+1)]
+	   set data [::expr -([lsearch $::tna::Axes $name]+1)]
 	} else {
 	    error "unknown identifier : $name"
 	}

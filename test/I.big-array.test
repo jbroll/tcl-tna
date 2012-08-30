@@ -1,0 +1,33 @@
+package require tcltest
+lappend auto_path ../lib
+
+package require tna
+
+source tna-helpers.tcl
+
+
+foreach { types fmt } { { char uchar short ushort int uint long } %d { float double } %.1f } {
+    foreach type $types {
+	::tcltest::test $type-big-array-1.0 { Process large arrays } -body {
+	    tna::array create a $type 2048 2048
+	    tna::array create b $type 2048 2048
+	    tna::array create c $type 2048 2048
+	    tna::value create d $type 0
+
+	    tna::expr { a = X+Y }
+	    tna::expr { b = 2 }
+
+	    foreach i [iota 1 100] {
+		tna::expr { c = a*a + b*b + 2.0 * a * b }
+	    }
+
+	    tna::expr { d = c[0,0] }
+	    d list
+	} -cleanup {
+	    a destroy
+	    b destroy
+	    c destroy
+	    d destroy
+	} -result [format $fmt 4]
+    }
+}

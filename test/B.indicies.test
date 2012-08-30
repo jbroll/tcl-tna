@@ -1,0 +1,25 @@
+package require tcltest
+lappend auto_path ../lib
+
+package require tna
+
+source tna-helpers.tcl
+
+
+foreach { types fmt } { { char uchar short ushort int uint long } %d { float double } %.1f } {
+    foreach type $types {
+	foreach dim { 1 { 1 1 } { 2 2 } { 3 3 } { 3 3 3 } { 1 2 3 } { 3 2 1 } { 10 10 10 } { 5 5 5 5 5 } } {
+	    set expr [join [lrange $vector 0 [llength $dim]-1] +]
+
+	    ::tcltest::test "$dim $type [join [lrange $vector 0 [llength $dim]-1] *] 1.0" "Test indicies [join [lrange $vector 0 [llength $dim]-1] *]" -body {
+		tna::array create a $type {*}$dim
+
+		tna::expr "a = $expr"
+		a list
+	    } -cleanup {
+		a destroy
+	    } -result  [matrix-eval $fmt $expr {*}$dim]
+	}
+    }
+}
+

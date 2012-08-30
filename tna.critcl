@@ -11,26 +11,11 @@ critcl::clibraries -lm
 source tcloo.tcl
 source template.tcl
 source functional.tcl
+source tna-tcl.tcl
 
 namespace eval tna {
-    set regsize 512
 
-    # This array defines the types available in the package.
-    #
-    #       tnaType CType         	pType	pFmt	getType	getFunc			scan
-    set Types {
-	      char  char              	int     %d 	int	Tcl_GetIntFromObj	c
-	     uchar "unsigned char"    	int     %d 	int	Tcl_GetIntFromObj	c 
-	     short  short		int     %d 	int	Tcl_GetIntFromObj	s 
-	    ushort "unsigned short"	int     %d 	int	Tcl_GetIntFromObj	s 
-	       int  int 		int     %d 	int	Tcl_GetIntFromObj	i
-	      uint "unsigned int"	long    %u 	long	Tcl_GetLongFromObj	i 
-	      long "long"		long   %ld 	long	Tcl_GetLongFromObj	i 
-	     float  float		double  %f 	double	Tcl_GetDoubleFromObj	f 
-	    double  double		double  %f 	double	Tcl_GetDoubleFromObj	d 
-    }
-
-    set IntOnly { mod band bor bxor bnot shr shl }
+    variable IntOnly { mod band bor bxor bnot shr shl }
 
     set Opcodes {
 	mod	{ R3 = R1 %  R2 	}
@@ -72,9 +57,6 @@ namespace eval tna {
 	xxx	{ R3 = (R1)++;		}
     }
 
-    set  axes { x y z u v }		; # The names of the axis index variables
-    set naxes [llength $axes]
-
 
     proc opcodes {} {
 	set opcodes {}
@@ -97,7 +79,7 @@ namespace eval tna {
 	return $opcodes
     }
 
-    foreach { type ctype pType   pFmt    getType getFunc scan } $::tna::Types i [iota 1 [expr [llength $::tna::Types]/7]] { 
+    foreach { type ctype pType   pFmt    getType getFunc scan } $::tna::Types i [iota 1 [::expr [llength $::tna::Types]/7]] { 
 
 	# Create a proc to allocate memory, and return the sizeof each type
 	#
