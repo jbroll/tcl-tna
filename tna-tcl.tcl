@@ -245,6 +245,7 @@ namespace eval tna {
     interp alias {} ::tna::sub  {} ::tna::binop
     interp alias {} ::tna::mul  {} ::tna::binop
     interp alias {} ::tna::div  {} ::tna::binop
+    interp alias {} ::tna::mod  {} ::tna::binop
     interp alias {} ::tna::shr  {} ::tna::binop
     interp alias {} ::tna::shl  {} ::tna::binop
     interp alias {} ::tna::gt   {} ::tna::binop 
@@ -307,7 +308,7 @@ namespace eval tna {
 
     proc compile { expr } {
 
-	if { ![info exists ::tna::cache($expr)] } {
+	if { 1 || ![info exists ::tna::cache($expr)] } {
 	    variable regs
 	    variable    X {}
 	    variable text {}

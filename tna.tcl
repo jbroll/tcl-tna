@@ -25,7 +25,7 @@ namespace eval tna {
 	    ushort "unsigned short"	int     %d 	int	Tcl_GetIntFromObj	s 
 	       int  int 		int     %d 	int	Tcl_GetIntFromObj	i
 	      uint "unsigned int"	long    %u 	long	Tcl_GetLongFromObj	i 
-	      long  long		long   %ld 	long	Tcl_GetLongFromObj	w 
+	      long "long"		long   %ld 	long	Tcl_GetLongFromObj	i 
 	     float  float		double  %f 	double	Tcl_GetDoubleFromObj	f 
 	    double  double		double  %f 	double	Tcl_GetDoubleFromObj	d 
     }
