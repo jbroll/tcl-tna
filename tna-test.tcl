@@ -45,15 +45,23 @@ foreach { types fmt } { { char uchar short ushort int uint long } %d { float dou
 		      8 = 2 * 4
 		      2 = 4 / 2
 
-		      4 = 1 << 2
-		      1 = 5 % 2
-		      0 = 8 % 2
-		      2 = 6 & 2
-		      3 = 1 | 2
+		      4 =  1 << 2
+		      1 =  5 %  2
+		      0 =  8 %  2
+		      2 =  6 &  2
+		      3 =  1 |  2
+		      
+		      1 =  5 >  1
+		      0 =  5 <  1
+		      1 =  5 >= 5
+		      1 =  5 <= 5
+		      1 =  5 == 5
+		      0 =  5 == 4
+
 	    } {
 		if { $type in { float double } && $op in $IntOnly } { continue }
 
-		::tcltest::test $dim $type-$op-1.0 "Simple array math : $c = $a $op $b" -body {
+		::tcltest::test "$dim $type $op 1.0" "Simple array math : $c = $a $op $b" -body {
 		    tna::array create a $type {*}$dim
 		    tna::array create b $type {*}$dim
 		    tna::array create c $type {*}$dim
