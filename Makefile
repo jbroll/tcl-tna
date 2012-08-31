@@ -1,9 +1,18 @@
 
-tna:
+tna:	tna.tcl
 	critcl3.kit -force -pkg tna 
 
+tna.tcl : tna.critcl
+	unsource tna.critcl > tna.tcl
+
 test: FORCE
-	@for test in test/*; do cd test; `basename $$test`; done
+	./tna-test
+
+clean:
+	rm tna.tcl
+
+timing:
+	./timing
 
 
 # Install ActiveState python
