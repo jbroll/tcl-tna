@@ -1,8 +1,8 @@
 
-tna:	tna.tcl
+tna:	tna.tcl tna.h
 	critcl3.kit -force -pkg tna 
 
-tna.tcl : tna.critcl
+tna.tcl : tna.critcl tna-tcl.tcl expression.tcl functional.tcl tcloo.tcl
 	unsource tna.critcl > tna.tcl
 
 test: FORCE

@@ -1,0 +1,12 @@
+#!/bin/sh
+#
+
+dnl() {
+    tr "\n" " "
+}
+
+echo "dbl	`/usr/bin/time ./dbl	 		2>&1 | dnl`"
+echo "dbl-mmx	`/usr/bin/time ./dbl-mmx 		2>&1 | dnl`"
+echo "tna	`/usr/bin/time ./tna-time.tcl 		2>&1 | dnl`"
+echo "numexpr	`/usr/bin/time ./numexpr-time.py	2>&1 | dnl`"
+echo "numpy	`/usr/bin/time ./numpy-time.py	2>&1 | dnl`"

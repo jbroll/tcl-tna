@@ -28,31 +28,45 @@ oo::class create tna::thing {
     method bytes {} { tna::bytes $data [::expr $size*[tna::sizeof_$type]] }
 }
 oo::class create tna::array {
-    variable type dims data size
-    accessor type dims data size
+    variable type dims data size offs
+    accessor type dims data size offs
 
     superclass tna::thing
 
     constructor { Type args } {
-	set type $Type
-	set dims $args
-	set size 1
+	while { [lindex $args 0] ne {} && [string is integer [lindex $args 0]] } {
+	    lappend dims [lindex $args 0]
+	    set args [lrange $args 1 end]
+	}
+	array set options { -offset { 1 } }
+	array set options $args
 
-	set data [::tna::malloc_$type [red x $args { set size [::expr $size*$x] }]]
+	set type $Type
+	set size 1
+	set offs $options(-offset)
+
+	if { [llength $offs] == 1 } {
+	    set offs [lrepeat [llength $dims] $options(-offset)]
+	} 
+	if { [llength $offs] != [llength $dims] } {
+	    error "number of offsets and dimensions must match $offs : $dims"
+	}
+
+	set data [::tna::malloc_$type [red x $dims { set size [::expr $size*$x] }]]
     }
 
     method list  {} { return [my list-helper [my bytes] [lreverse $dims] 0] }
 }
 oo::class create tna::value {
-    variable type dims data size 
-    accessor type dims data size
+    variable type dims data size offs
+    accessor type dims data size offs
 
     superclass tna::thing
 
-    constructor { Type args } {
+    constructor { Type value } {
 	set type $Type
 	set dims { 1 }
-
+	set offs { 0 }
 	set size 1
 	set data  [tna::malloc_$type $size]
     }
@@ -86,7 +100,7 @@ namespace eval tna {
 
     set reglist {}
 
-    proc xindx { dims indx } {			  # Parse the slice syntax into a list.
+    proc xindx { dims offs indx } {			  # Parse the slice syntax into a list.
 	foreach d $dims x $indx {
 	    if { $d eq {} } { break }
 
@@ -157,7 +171,9 @@ namespace eval tna {
 	    set data [$name data]
 	    set type [$name type]
 	    set dims [$name dims]
-	    set slic [xindx $dims {}]
+	    set offs [$name offs]
+
+	    set slic [xindx $dims $offs {}]
 	    set item tna
 	} elseif { [string is int    $value] } {
 	    set type int
@@ -222,7 +238,7 @@ namespace eval tna {
 	    lset regs(@$reg) $i [lindex $regs($name) $i]
 	}
 
-	lset regs(@$reg) end [xindx [$name dims] $args]
+	lset regs(@$reg) end [xindx [$name dims] [$name offs] $args]
 
 	return @$reg
     }

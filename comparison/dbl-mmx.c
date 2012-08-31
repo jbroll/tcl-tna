@@ -27,8 +27,8 @@ main() {
 
     for ( y = 0; y < NX; y++ ) {
 	for ( x = 0; x < NX; x++ ) {
-	    a[y*NX+x] = 1;
-	    b[y*NX+x] = 4;
+	    a[y*NX+x] = x+y;
+	    b[y*NX+x] = 2;
 	}
     }
 
@@ -46,5 +46,5 @@ main() {
 	}
     }
 
-    printf("%f\n", c[0]);
+    printf("%.1f\n", c[0]);
 }

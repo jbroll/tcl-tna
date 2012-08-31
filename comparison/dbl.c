@@ -10,15 +10,15 @@ main() {
     	int i, x, y;
 	double *a;
 	double *b;
-	volatile double *data;
+	volatile double *c;
 
-    a    = (double *) calloc(NX*NX,sizeof(double));
-    b    = (double *) calloc(NX*NX,sizeof(double));
-    data = (double *) calloc(NX*NX,sizeof(double));
+    a = (double *) calloc(NX*NX,sizeof(double));
+    b = (double *) calloc(NX*NX,sizeof(double));
+    c = (double *) calloc(NX*NX,sizeof(double));
 
     for ( y = 0; y < NX; y++ ) {
 	for ( x = 0; x < NX; x++ ) {
-	    b[y*NX+x] = x+y;
+	    a[y*NX+x] = x+y;
 	    b[y*NX+x] = 2;
 	}
     }
@@ -27,8 +27,10 @@ main() {
 	for ( y = 0; y < NX; y++ ) {
 	    for ( x = 0; x < NX; x++ ) {
 
-		data[y*NX+x] = a[y*NX+x]*a[y*NX+x] + b[y*NX+x]*b[y*NX+x] + 2 * a[y*NX+x] *b[y*NX+x];
+		c[y*NX+x] = a[y*NX+x]*a[y*NX+x] + b[y*NX+x]*b[y*NX+x] + 2 * a[y*NX+x] *b[y*NX+x];
 	    }
 	}
     }
+
+    printf("%.1f\n", c[0]);
 }
