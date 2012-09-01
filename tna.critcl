@@ -165,7 +165,7 @@ namespace eval tna {
 
 	void slice_off(Register *r, int d, int x) {
 	    if ( r->axis[d].size == -(d+1) ) {
-		switch ( r->type ) {			// Slice index access from a typed Value register.
+		switch ( r->type ) {				// Slice index access from a typed Value register.
 		    $::tna::TypeCases
 		    default: printf("Unknown register type %d\n", r->type);
 			     break;
@@ -174,7 +174,7 @@ namespace eval tna {
 
 	    if ( r->axis[d].size <= 0 ) { return; }		// no need to adjust offset of a Value or temp register.
 
-	    r->offs[d] = ((char *)r->offs[d+1])		// Adjust offset into Array type.
+	    r->offs[d] = ((char *)r->offs[d+1])			// Adjust offset into Array type.
 			+ ((r->axis[d].star+((x*r->axis[d].incr)
 			%   r->axis[d].size))
 			%   r->axis[d].dims)

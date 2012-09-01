@@ -12,7 +12,7 @@ clean:
 	rm tna.tcl
 
 timing:
-	./timing
+	cd comparison; ./compare
 
 
 # Install ActiveState python

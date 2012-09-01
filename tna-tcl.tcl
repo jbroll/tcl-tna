@@ -2,7 +2,10 @@
 source expression.tcl
 
 oo::class create tna::thing {
-    variable type dims data size
+    variable type dims data size indxDefault
+
+    set indxDefault XYZ
+
 
     method list-helper { bytes dims offs } {
 
@@ -28,22 +31,25 @@ oo::class create tna::thing {
     method bytes {} { tna::bytes $data [::expr $size*[tna::sizeof_$type]] }
 }
 oo::class create tna::array {
-    variable type dims data size offs
-    accessor type dims data size offs
+    variable type dims data size offs indx indxDefault
+    accessor type dims data size offs indx indxDefault
 
     superclass tna::thing
 
     constructor { Type args } {
+	classvar indxDefault XYZ
+
 	while { [lindex $args 0] ne {} && [string is integer [lindex $args 0]] } {
 	    lappend dims [lindex $args 0]
 	    set args [lrange $args 1 end]
 	}
-	array set options { -offset { 1 } }
+	array set options [list -offset { 0 } -index $indxDefault]
 	array set options $args
 
 	set type $Type
 	set size 1
 	set offs $options(-offset)
+	set indx $options(-index)
 
 	if { [llength $offs] == 1 } {
 	    set offs [lrepeat [llength $dims] $options(-offset)]
@@ -56,6 +62,39 @@ oo::class create tna::array {
     }
 
     method list  {} { return [my list-helper [my bytes] [lreverse $dims] 0] }
+
+    method indx { { xindx {} } } {			  # Parse the slice syntax into a list.
+
+	if { $indx eq "ZYX" } { set xindx [lreverse $xindx] }
+
+	foreach d $dims x $xindx o $offs {
+	    if { $d eq {} } { break }
+
+	    set xindx [split $x :]
+
+	    if { [llength $xindx] == 1 && $x != "*" } {
+		if { $x < 0 } { set x [::expr { $d + $x }] }
+		set s $x
+		set e $x
+		set i  1
+	    } else {
+		lassign $xindx s e i
+
+		if { $s eq {} || $s eq "*" } { set s $o 	   }
+		if { $e eq {}              } { set e [::expr { $d - 1 + $o }] }
+		if { $i eq {}              } { set i  1 	   }
+
+		if { $s < 0 } { set s [::expr { $d + $s }] }
+		if { $e < 0 } { set e [::expr { $d + $e }] }
+	    }
+	    set s [::expr { $s - $o }]
+	    set e [::expr { $e - $o }]
+
+	    lappend list [list $s $e $i]
+	}
+
+	return $list
+    }
 }
 oo::class create tna::value {
     variable type dims data size offs
@@ -71,6 +110,7 @@ oo::class create tna::value {
 	set data  [tna::malloc_$type $size]
     }
     method list  {} { return [my list-helper [my bytes] 1 0] }
+    method indx  { args } { return [list [list 0 0 0]] }
 }
 
 namespace eval tna {
@@ -100,34 +140,6 @@ namespace eval tna {
 
     set reglist {}
 
-    proc xindx { dims offs indx } {			  # Parse the slice syntax into a list.
-	foreach d $dims x $indx {
-	    if { $d eq {} } { break }
-
-	    set indx [split $x :]
-
-	    if { [llength $indx] == 1 && $x != "*" } {
-		if { $x < 0 } { set x [::expr $d+$x] }
-		set s $x
-		set e $x
-		set i  1
-	    } else {
-		lassign $indx s e i
-
-
-		if { $s eq {} || $s eq "*" } { set s  0 	   }
-		if { $e eq {}              } { set e [::expr $d-1] }
-		if { $i eq {}              } { set i  1 	   }
-
-		if { $s < 0 } { set s [::expr $d+$s] }
-		if { $e < 0 } { set e [::expr $d+$e] }
-	    }
-
-	    lappend list [list $s $e $i]
-	}
-
-	return $list
-    }
 
     proc lookup { name regName typName itmName datName } {
 	variable regs
@@ -171,9 +183,8 @@ namespace eval tna {
 	    set data [$name data]
 	    set type [$name type]
 	    set dims [$name dims]
-	    set offs [$name offs]
 
-	    set slic [xindx $dims $offs {}]
+	    set slic [$name indx]
 	    set item tna
 	} elseif { [string is int    $value] } {
 	    set type int
@@ -191,7 +202,6 @@ namespace eval tna {
 
 	set ::tna::regs($name) 	\
 	    [list [incr ::tna::nreg] $type $item $name $data : $::tna::ItemsX($item) $::tna::TypesX($type) $dims $slic]
-	#puts "set regs($name) $::tna::regs($name)"
     }
 
 
@@ -238,7 +248,7 @@ namespace eval tna {
 	    lset regs(@$reg) $i [lindex $regs($name) $i]
 	}
 
-	lset regs(@$reg) end [xindx [$name dims] [$name offs] $args]
+	lset regs(@$reg) end [$name indx $args]
 
 	return @$reg
     }

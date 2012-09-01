@@ -56,3 +56,21 @@ proc procs args {
     #
     #X create x
     #x a
+
+
+proc ::oo::Helpers::classvar { args } {			# http://wiki.tcl.tk/21595 + mods
+    set class [lindex [uplevel 1 {self class}] 0]
+
+    oo::define $class self export varname
+
+    foreach { var value } $args {
+	set myvar [uplevel 1 [list my varname $var]]
+	set clvar [$class varname $var]
+
+	uplevel 1 [list upvar $clvar $myvar]
+
+	if { ![info exists $clvar] } {
+	    set $clvar $value
+	}
+    }
+}
