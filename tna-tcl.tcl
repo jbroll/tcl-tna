@@ -202,6 +202,7 @@ namespace eval tna {
 
 	set ::tna::regs($name) 	\
 	    [list [incr ::tna::nreg] $type $item $name $data : $::tna::ItemsX($item) $::tna::TypesX($type) $dims $slic]
+	    puts "list incr ::tna::nreg $type $item $name $data : $::tna::ItemsX($item) $::tna::TypesX($type) $dims $slic"
     }
 
 
@@ -260,6 +261,9 @@ namespace eval tna {
 	lookup $a regA typeA - -
 	lookup $b regB typeB - -
 
+	if { $typeA == "any" } { set typeA $typeB }
+	if { $typeB == "any" } { set typeB $typeA }
+
 	if { $b eq "X" } {						# Add X register fixup
 	    set tmp [tempreg $typeB cx]
 	    lappend text [list $::tna::OpcodesX(tna_opcode_xxx_$typeB) $regB 0 $tmp]
@@ -295,6 +299,34 @@ namespace eval tna {
 	assign $op $a [binop [string range $op  0 2] $a $b]
     }
 
+    interp alias {} ::tna::inc  {} ::tna::uniop
+    interp alias {} ::tna::dec  {} ::tna::uniop
+    interp alias {} ::tna::uinc {} ::tna::uniop
+    interp alias {} ::tna::udec {} ::tna::uniop
+
+    proc uniop { op a } {
+	lookup $a regA typeA itemA dataA
+
+	set one [register 1 1 $typeA]
+	set tmp [tempreg      $typeA]
+	
+	switch -- $op {
+	 uinc - udec {
+	    lappend text [list $OpcodesX(tna_opcode_${typeA}_${typeA}) $regA    0 $tmp]
+	    lappend text [list $opcodesx(tna_opcode_${typeA}_add)      $regA $one $regA]
+
+	    return $tmp
+	 }
+	 uinc - udec {
+	    lappend text [list $opcodesx(tna_opcode_${typeA}_add)      $regA $one $regA]
+
+	    return $regA
+	 }
+	 uadd { return $a }
+	 usub { binop $op $a 0 }
+	}
+    }
+
     interp alias {} ::tna::add  {} ::tna::binop
     interp alias {} ::tna::sub  {} ::tna::binop
     interp alias {} ::tna::mul  {} ::tna::binop
@@ -322,6 +354,9 @@ namespace eval tna {
 
 	lookup $a regA typeA itemA dataA
 	lookup $b regB typeB itemB dataB
+
+	if { $typeA == "any" } { set typeA $typeB }
+	if { $typeB == "any" } { set typeB $typeA }
 
 	if { $a eq "X" } {					  # X register fixup
 	    if { $::tna::X eq {} } {
@@ -370,7 +405,7 @@ namespace eval tna {
 	    variable reglist {}
 
 	    ::array unset regs
-	    set regs(0) [list 0 0 @0 0 0 : $::tna::ItemsX(const) $::tna::TypesX(int) {} {}]
+	    set regs(0) [list 0 any @0 0 0 : $::tna::ItemsX(const) $::tna::TypesX(int) {} {}]
 
 	    expression::parse $expr [expression::prep-tokens $::expression::optable] $::expression::optable ::tna::Compile
 

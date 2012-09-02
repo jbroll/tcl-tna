@@ -30,7 +30,7 @@ namespace eval tna {
 	sub	{ R3 = R1 - R2;		}
 	mul 	{ R3 = R1 * R2;		}
 	div 	{ R3 = R1 / R2;		}
-	neg 	{ R3 = -(R1);		}
+	usub 	{ R3 = -(R1);		}
 	equ 	{ R3 = R1 == R2;	}
 	neq 	{ R3 = R1 != R2;	}
 	gt 	{ R3 = R1 > R2;		}

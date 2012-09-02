@@ -5,8 +5,8 @@ tna:	tna.tcl tna.h
 tna.tcl : tna.critcl tna-tcl.tcl expression.tcl functional.tcl tcloo.tcl
 	unsource tna.critcl > tna.tcl
 
-test: FORCE
-	./tna-test
+test: tna FORCE
+	./tna-test.tcl
 
 clean:
 	rm tna.tcl
