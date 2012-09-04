@@ -314,28 +314,6 @@ namespace eval tna {
 	    Tcl_ObjSetVar2(ip, tnaOpcodes, opname, opcode, TCL_GLOBAL_ONLY);
 	}
     }
-    critcl::cproc xprint { long Data int type int nx int ny }  void {
-	    void *data = (double *) Data;
-
-	    int i, j;
-
-	for ( j = 0; j < ny; j++ ) {
-	    for ( i = 0; i < ny; i++ ) {
-		switch ( type ) {
-		 case TNA_TYPE_char:   printf("   %7d", ((char   *) data)[j*nx+i]); break;
-		 case TNA_TYPE_uchar:  printf("   %7d", ((uchar  *) data)[j*nx+i]); break;
-		 case TNA_TYPE_short:  printf("   %7d", ((short  *) data)[j*nx+i]); break;
-		 case TNA_TYPE_ushort: printf("   %7d", ((ushort *) data)[j*nx+i]); break;
-		 case TNA_TYPE_int:    printf("   %7d", ((int    *) data)[j*nx+i]); break;
-		 case TNA_TYPE_uint:   printf("   %7d", ((uint   *) data)[j*nx+i]); break;
-		 case TNA_TYPE_long:   printf("  %7ld", ((long   *) data)[j*nx+i]); break;
-		 case TNA_TYPE_float:  printf(" %7.2f", ((float  *) data)[j*nx+i]); break;
-		 case TNA_TYPE_double: printf(" %7.2f", ((double *) data)[j*nx+i]); break;
-		}
-	    }
-	    printf("\n");
-	}
-    }
 
     critcl::cproc execute { Tcl_Interp* ip Tcl_Obj* regsList Tcl_Obj* textList } ok [template:subst {
 	int 	i, s, j;

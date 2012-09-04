@@ -13,7 +13,17 @@ oo::class create tna::thing {
 		
 	if { [llength $dims] == 1 } {
 	    for { set i 0 } { $i < $d } { incr i } {
-		binary scan $bytes x$offs$::tna::TypesScan($type)[lindex $dims 0] row;  return $row
+		binary scan $bytes x$offs$::tna::TypesScan($type)[lindex $dims 0] row;
+		
+		switch $type {
+		 uchar  { set row [map value $row { expr { $value &        0xFF } }] }
+		 ushort { set row [map value $row { expr { $value &      0xFFFF } }] }
+		 uint   { set row [map value $row { expr { $value &  0xFFFFFFFF } }] }
+		 ulong  { set row [map value $row { expr { $value &  0xFFFFFFFF } }] }
+		}
+		
+		return $row
+
 	    }    
 	} else {
 
@@ -343,18 +353,20 @@ namespace eval tna {
 	 inc - uinc { set incr  1 }
 	}
 
-	lookup  $incr reg1 type1 -     - $typeA
-
 	set tmp [tempreg $typeA]
 
 	switch -- $op {
 	 inc - dec {
+	    lookup  $incr reg1 type1 -     - $typeA
+
 	    lappend text [list $::tna::OpcodesX(tna_opcode_${typeA}_${typeA}) $regA     0 $tmp]
 	    lappend text [list $::tna::OpcodesX(tna_opcode_add_${typeA})      $regA $reg1 $regA]
 
 	    return @$tmp
 	 }
 	 uinc - udec {
+	    lookup  $incr reg1 type1 -     - $typeA
+
 	    lappend text [list $::tna::OpcodesX(tna_opcode_add_${typeA})      $regA $reg1 $regA]
 
 	    return $a
@@ -520,7 +532,4 @@ namespace eval tna {
 
 	return $listing
     }
-
-    proc print { x } { xprint [$x data] $::tna::TypesX([$x type]) {*}[$x dims] }
-
 }

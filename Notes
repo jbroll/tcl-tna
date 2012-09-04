@@ -1,8 +1,18 @@
 
-		      1 = 3 && 4
-		      0 = 0 && 4
-		      1 = 0 || 4
-		      0 = 0 || 4
+Signyness of numbers
+
+a set {{ 1 2 3 } { 4 5 6 } { 7 8 9 }}
+a shape { 3 2 4 }
+
+Allows bald pointers and byte arrays
+    array a x y -data [fitsy read $file,2 data]
+
+
+Threads
+
+Reverse slices
+    Assignment alias detection
+
 
 
 # Tcl Numeric Array assembler
