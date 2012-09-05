@@ -39,6 +39,7 @@ oo::class create tna::thing {
     }
 
     method bytes {} { tna::bytes $data [::expr $size*[tna::sizeof_$type]] }
+    method print { { fp stdout } } { puts $fp [my list] }
 }
 oo::class create tna::array {
     variable type dims data size offs indx indxDefault
@@ -443,29 +444,48 @@ namespace eval tna {
 
     proc Compile { op args } { return [$op $op {*}$args] }
 
-    proc compile { expr } {
+    proc semi { op } {
+	exprSave
+	exprStart
+    }
 
-	if { 1 || ![info exists ::tna::cache($expr)] } {
-	    variable regs
-	    variable    X {}
-	    variable text {}
-	    variable nreg  0
-	    variable reglist {}
+    proc exprStart {} {
+	variable regs
+	variable    X {}
+	variable text {}
+	variable nreg  0
+	variable reglist {}
 
-	    ::array unset regs
-	    set regs(0) [list 0 any @0 0 0 : $::tna::ItemsX(const) $::tna::TypesX(int) {} {}]
+	::array unset regs
+	set regs(0) [list 0 any @0 0 0 : $::tna::ItemsX(const) $::tna::TypesX(int) {} {}]
+    }
+    proc exprSave {} {
+	variable Code
+	variable regs
+	variable text
 
-	    expression::parse $expr [expression::prep-tokens $::expression::optable] $::expression::optable ::tna::Compile
-
-	    set ::tna::cache($expr) [list [lsort -real -index 0 [map { name values } [::array get regs] { I $values }]] $text]
+	if { $text ne {} } {
+	    lappend Code [list [lsort -real -index 0 [map { name values } [::array get regs] { I $values }]] $text]
 	}
 
-	return $::tna::cache($expr)
+	exprStart
+    }
+
+    proc compile { expr } {
+	variable Code {}
+
+	exprStart
+	expression::parse $expr [expression::prep-tokens $::expression::optable] $::expression::optable ::tna::Compile
+	exprSave
+
+	return $Code
     }
     proc expr { expr } {
 	set code [compile $expr]
 	if { $::tna::debug } { puts [::tna::disassemble {*}$code] }
-	::tna::execute {*}$code
+	foreach stmt $code {
+	    ::tna::execute {*}$stmt
+	}
     }
     proc debug { x } { set ::tna::debug $x }
 

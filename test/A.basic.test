@@ -60,9 +60,9 @@ foreach { types fmt } { { char short int long } %d { uchar ushort uint } %u { fl
 		    tna::array create b $type {*}$dim
 		    tna::array create c $type {*}$dim
 
-		    tna::expr "a = $a"
-		    tna::expr "b = $b"
-		    tna::expr "c = a $op b"
+		    tna::expr "	a = $a
+		    		b = $b
+		    		c = a $op b"
 		    c list
 		} -cleanup {
 		    a destroy

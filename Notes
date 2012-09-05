@@ -1,6 +1,4 @@
 
-Signyness of numbers
-
 a set {{ 1 2 3 } { 4 5 6 } { 7 8 9 }}
 a shape { 3 2 4 }
 
@@ -12,6 +10,16 @@ Threads
 
 Reverse slices
     Assignment alias detection
+
+Move parts of execute into compile
+    Add dimensions component to compiled code 
+    returning a triple (dims, regs, text).
+
+    Add compiler epochs to track definitions
+    of arrays and values and cache string to code
+
+
+Tcl variable access.
 
 
 

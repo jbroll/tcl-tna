@@ -1,0 +1,84 @@
+#!/usr/bin/env tclkit8.6
+#
+
+package require tcltest
+lappend auto_path ../lib
+
+package require tna
+
+source tna-helpers.tcl
+
+::tna::debug 0
+
+foreach { types fmt } { { char short int long } %d { uchar ushort uint } %u { float double } %.1f } {
+    foreach type $types {
+	foreach { name op a b } { inc ++ -1 1 dec -- 1 -1 } {
+	    switch $type {
+	     uchar  { set a [expr {      $a &        0xFF }] ; set b [expr {      $b &        0xFF }] }
+	     ushort { set a [expr {      $a &      0xFFFF }] ; set b [expr {      $b &      0xFFFF }] }
+	     uint   { set a [expr { wide($a) & 0xFFFFFFFF }] ; set b [expr { wide($b) & 0xFFFFFFFF }] }
+	    }
+
+	    ::tcltest::test usub-$name-$type-1.0 "$op" -body {
+		tna::array create a $type 3 3
+		tna::array create b $type 3 3
+
+		tna::expr "a = -(${op}b)"
+
+		list [a list] [b list]
+	    } -cleanup {
+		a destroy
+		b destroy
+	    } -result  [list [matrix [format $fmt $a] 3 3] [matrix [format $fmt $b] 3 3]]
+	}
+    }
+}
+
+foreach { types fmt } { { char short int long } %d { uchar ushort uint } %u { float double } %.1f } {
+    foreach type $types {
+	foreach { name op a } { uinc ++ 1 udec -- -1 } {
+
+	    switch $type {
+	     uchar  { set a [expr {      $a  &       0xFF }] ; set b [expr {      $b  &       0xFF }] }
+	     ushort { set a [expr {      $a  &     0xFFFF }] ; set b [expr {      $b  &     0xFFFF }] }
+	     uint   { set a [expr { wide($a) & 0xFFFFFFFF }] ; set b [expr { wide($b) & 0xFFFFFFFF }] }
+	    }
+
+	    ::tcltest::test $name-$type-1.0 "$op" -body {
+		tna::array create a $type 3 3
+		tna::array create b $type 3 3
+
+		tna::expr "a = ${op}b"
+
+		list [a list] [b list]
+	    } -cleanup {
+		a destroy
+		b destroy
+	    } -result  [list [matrix [format $fmt $a] 3 3] [matrix [format $fmt $a] 3 3]]
+	}
+    }
+}
+
+foreach { types fmt } { { char short int long } %d { uchar ushort uint } %u { float double } %.1f } {
+    foreach type $types {
+	foreach { name op a } { inc ++ 1 dec -- -1 } {
+	    switch $type {
+	     uchar  { set a [expr {      $a  &       0xFF }] ; set b [expr {      $b  &       0xFF }] }
+	     ushort { set a [expr {      $a  &     0xFFFF }] ; set b [expr {      $b  &     0xFFFF }] }
+	     uint   { set a [expr { wide($a) & 0xFFFFFFFF }] ; set b [expr { wide($b) & 0xFFFFFFFF }] }
+	    }
+	    ::tcltest::test $name-$type-1.0 "$op" -body {
+		tna::array create a $type 3 3
+		tna::array create b $type 3 3
+
+		tna::expr "a = b$op"
+
+		list [a list] [b list]
+	    } -cleanup {
+		a destroy
+		b destroy
+	    } -result  [list [matrix [format $fmt 0] 3 3] [matrix [format $fmt $a] 3 3]]
+	}
+    }
+}
+

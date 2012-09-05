@@ -64,6 +64,7 @@
 	(	{ 1000		 0	{} call	}
 	)	{ 1000		 0	{} none	}
 	,	{ 1000		 0	{} none	}
+	;       { 1000		 0	{} semi }
     }
 
 
@@ -79,6 +80,7 @@
 	    set token [string map { u {} } $token]
 	    lappend map $token " $token "
 	}
+	lappend map "\n" " ; "
 	lsort -stride 2 -command lencmp [lsort -stride 2 -u $map]
     }
 
@@ -138,18 +140,34 @@
     # a script prefix with will be called as each subexpresion in the input is recognized.
     #
     proc parse { input tokenmap optable prefix } {
-	set operator {}			; # Stacks
+	set operator {}					; # Stacks
 	set operands {}
 	set parens   {}
+	set prv {}					; # The previous token.
 
 	set input [string map $tokenmap $input]		; # Lexing done by mapping spaces around the operators!
 
 	#puts $input
 
-	set prv {}					; # The previous token.
 	try {
 	    while { [llength $input] } {
 		set tok [pull input]
+
+		if { $tok eq ";" } {
+		    while { [top operator] ne {} } {
+			push operands [{*}$prefix [name [set op [pop operator]]] {*}[pop operands [arity $op]]]
+		    }
+		    {*}$prefix [name ";"]
+
+		    # Reset everyone
+		    #
+		    set operator {}			; # Stacks
+		    set operands {}
+		    set parens   {}
+		    set prv {}				; # The previous token.
+
+		    continue
+		}
 
 		if { [prec ${tok}u] && $prv ne ")" && ($prv eq {} || [prec $prv]) } {
 		    set tok ${tok}u
