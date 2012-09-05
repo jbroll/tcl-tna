@@ -87,17 +87,30 @@ oo::class create tna::array {
 
 	    set xindx [split $x :]
 
-	    if { [llength $xindx] == 1 && $x != "*" } {
-		if { $x < 0 } { set x [::expr { $d + $x }] }
-		set s $x
-		set e $x
-		set i  1
+	    if { $x == "" || $x == "*" || $x == ":" } {
+		set s $o
+		set e [::expr { $d - 1 + $o }]
+		set i 1
+	    } elseif { $x == "-*" } {
+		set s [::expr { $d - 1 + $o }]
+		set e $o
+		set i 1
+	    } elseif { [llength $xindx] == 1 } {
+		set s $xindx
+
+		if { $s < 0 } { set s [::expr { $d + $s }] }
+
+		set e $s
+		set i 1
 	    } else {
+		set e {}
+		set i {}
+
 		lassign $xindx s e i
 
-		if { $s eq {} || $s eq "*" } { set s $o 	   }
-		if { $e eq {}              } { set e [::expr { $d - 1 + $o }] }
-		if { $i eq {}              } { set i  1 	   }
+		if { $s eq {} } { set s $o 	   }
+		if { $e eq {} } { set e [::expr { $d - 1 + $o }] }
+		if { $i eq {} } { set i  1 	   }
 
 		if { $s < 0 } { set s [::expr { $d + $s }] }
 		if { $e < 0 } { set e [::expr { $d + $e }] }
