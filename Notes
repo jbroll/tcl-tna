@@ -11,6 +11,9 @@ Threads
 Reverse slices
     Assignment alias detection
 
+    Look at incr on values and on single item slices to see it 
+    they get set to 0 somewhere.
+
 Move parts of execute into compile
     Add dimensions component to compiled code 
     returning a triple (dims, regs, text).

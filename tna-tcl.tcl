@@ -486,7 +486,11 @@ namespace eval tna {
     }
     proc expr { expr } {
 	set code [compile $expr]
-	if { $::tna::debug } { puts [::tna::disassemble {*}$code] }
+	if { $::tna::debug } {
+	    foreach stmt $code {
+		puts [::tna::disassemble {*}$stmt] 
+	    }
+	}
 	foreach stmt $code {
 	    ::tna::execute {*}$stmt
 	}
