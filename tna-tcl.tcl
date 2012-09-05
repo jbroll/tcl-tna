@@ -37,6 +37,10 @@ oo::class create tna::thing {
 
 	return $reply
     }
+    method destroy {} {
+	::tna::free $data
+	next
+    }
 
     method bytes {} { tna::bytes $data [::expr $size*[tna::sizeof_$type]] }
     method print { { fp stdout } } { puts $fp [my list] }

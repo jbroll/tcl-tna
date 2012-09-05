@@ -79,6 +79,8 @@ namespace eval tna {
 	return $opcodes
     }
 
+    critcl::cproc free { long data } void { free((void *) data); }
+
     foreach { type ctype pType   pFmt    getType getFunc scan } $::tna::Types i [iota 1 [::expr [llength $::tna::Types]/7]] { 
 
 	# Create a proc to allocate memory, and return the sizeof each type
@@ -579,7 +581,7 @@ namespace eval tna {
     }]
 
     critcl::cproc bytes { Tcl_Interp* ip long data int size } ok {
-	Tcl_SetObjResult(ip, Tcl_NewByteArrayObj(data, size));
+	Tcl_SetObjResult(ip, Tcl_NewByteArrayObj((void *)data, size));
 
 	return TCL_OK;
     }
