@@ -43,6 +43,7 @@ typedef struct _Machine {
     Instruct *program;
     int    nr;
     Register *registers;
+    int   *zero;
     int   *dims;
     int    nd;
 } Machine;

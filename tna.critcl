@@ -2,8 +2,9 @@
 package provide tna 0.5
 
 critcl::tsources tna.tcl	 			; # This file is a tcl source file for the package.
-critcl::tsources tcloo.tcl template.tcl functional.tcl	; # Helpers
-critcl::cheaders tna.h 
+#critcl::tsources tcloo.tcl template.tcl functional.tcl	; # Helpers
+critcl::cheaders tna.h tpool/tpool.h
+critcl::csources tpool/tpool.c
 
 critcl::cflags -O3
 critcl::clibraries -lm
@@ -79,6 +80,12 @@ namespace eval tna {
 	return $opcodes
     }
 
+    critcl::ccode {
+	#include <stdlib.h>
+	#include <stdio.h>
+	#include <math.h>
+    }
+
     critcl::cproc free { long data } void { free((void *) data); }
 
     foreach { type ctype pType   pFmt    getType getFunc scan } $::tna::Types i [iota 1 [::expr [llength $::tna::Types]/7]] { 
@@ -108,13 +115,14 @@ namespace eval tna {
     }
 
     critcl::ccode [template:subst {
-	#include <stdlib.h>
-	#include <stdio.h>
-	#include <math.h>
 
 	#define RLEN $::tna::regsize
 
-	#include "/Users/john/src/tna/tna.h"		/* The cheaders directive above didn't seem to take?	*/
+	#include "tna.h"		/* The cheaders directive above didn't seem to take?	*/
+	#include "tpool.h"
+
+	static TPool *tp = NULL;
+	static nthread   = 2;
 
 	int SizeOf[] = {
 	    0 [: { type ctype pType   pFmt    getType getFunc scan } $::tna::Types { , sizeof($type) }]
@@ -242,6 +250,7 @@ namespace eval tna {
 
     critcl::ccode {
 
+	void slice_thr(Machine *machine) { slice_run(machine, machine->nd); }
 	void slice_run(Machine *machine, int dim)
 	{
 		short *program = machine->program;
@@ -250,15 +259,16 @@ namespace eval tna {
 
 		int rl;
 		int x, X;
-		int X1;
+		int X0, X1;
 		short    *ip;
 		Instruct *instr;
 
 	    dim--;
 
+	    X0 = machine->zero[dim];
 	    X1 = machine->dims[dim];
 
-	    for ( X = 0; X < X1; ) {				// Run over the entire dimension
+	    for ( X = X0; X < X1; ) {				// Run over the entire dimension
 		if ( dim ) {
 		    int i;
 
@@ -348,6 +358,8 @@ namespace eval tna {
 	double dataValu;
 
 	int	ndim = 0;
+
+	if ( !tp ) { tp = TPoolInit(16); }
 
 	// Copy the registers Tcl structure into the Register C struct.
 	//
@@ -565,12 +577,13 @@ namespace eval tna {
 	}
 
 	{
-	    Machine m;
 	    int	    dims[NDIM];
+	    int	    zero[NDIM];
 	    int	    ndim = 0;
 
 	    for ( j = 0; j < NDIM;  j++ ) {
 		dims[j] = 0;
+		zero[j] = 0;
 
 		for ( i = 0; i < nregs; i++ ) {
 		    if ( regs[i].used && regs[i].item == DataRegister && dims[j] < regs[i].axis[j].size ) {
@@ -580,14 +593,23 @@ namespace eval tna {
 		if ( dims[j] != 0 ) { ndim = j+1; }
 	    }
 
-	    m.program   =  (Instruct *) text;
-	    m.registers = regs;
-	    m.nr        = nregs;
+	    {
+		Machine m;
 
-	    m.dims	= dims;
-	    m.nd	= ndim;
+		m.program   = (Instruct *) text;
 
-	    slice_run(&m, ndim);
+		// This is broken because the index registers point into the register data itself.
+		//
+		m.registers = regs; malloc(nregs*sizeof(Register)); memcpy(m.registers, regs, nregs*sizeof(Register));
+
+		m.nr        = nregs;
+
+		m.zero	= zero;
+		m.dims	= dims;
+		m.nd	= ndim;
+
+		TPoolThreadWait(TPoolThreadStart(tp, slice_thr, &m));
+	    }
 	}
 
 	return TCL_OK;
