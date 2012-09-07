@@ -2,7 +2,7 @@
 a set {{ 1 2 3 } { 4 5 6 } { 7 8 9 }}
 a shape { 3 2 4 }
 
-Allows bald pointers and byte arrays
+Allow bald pointers and byte arrays
     array a x y -data [fitsy read $file,2 data]
 
 
@@ -11,8 +11,8 @@ Threads
 Reverse slices
     Assignment alias detection
 
-    Look at incr on values and on single item slices to see it 
-    they get set to 0 somewhere.
+    Working needs more tests.
+
 
 Move parts of execute into compile
     Add dimensions component to compiled code 
