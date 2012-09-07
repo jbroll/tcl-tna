@@ -13,3 +13,5 @@ dbl-omp: dbl-omp.c
 flt: flt.c
 	gcc -O3 flt.c -o flt
 
+clean:
+	rm -f dbl dbl-mmx

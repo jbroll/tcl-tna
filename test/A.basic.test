@@ -6,7 +6,7 @@ package require tna
 
 source tna-helpers.tcl
 
-foreach { types result } { { char uchar short ushort int uint long } 3 { float double } 3.0 } {
+foreach { types result } { { char uchar short ushort int uint long ulong } 3 { float double } 3.0 } {
     foreach type $types {
 	::tcltest::test 3x3-$type-1.0 { Simple array math } -body {
 	    tna::array create a $type 3 3
@@ -49,9 +49,10 @@ foreach { types fmt } { { char short int long } %d { uchar ushort uint } %u { fl
 		if { $type in { float double } && $op in $IntOnly } { continue }
 
 		switch $type {
-		 uchar  { set c [expr {      $c &        0xFF }] }
-		 ushort { set c [expr {      $c &      0xFFFF }] }
-		 uint   { set c [expr { wide($c) & 0xFFFFFFFF }] }
+		 uchar   { set c [expr {      $c &        0xFF }] }
+		 ushort  { set c [expr {      $c &      0xFFFF }] }
+		 uint    { set c [expr { wide($c) & 0xFFFFFFFF }] }
+		 ulong   { set c [expr { wide($c) & 0xFFFFFFFFFFFFFFFF }] }
 		}
 
 

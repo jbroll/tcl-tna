@@ -16,7 +16,6 @@ void TPoolWorker(void *data) {
     int i_have_work;
 
 
-
     Tcl_MutexLock(&t->lock);
 
     while ( 1 ) {

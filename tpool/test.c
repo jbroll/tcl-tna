@@ -1,7 +1,7 @@
 
 #include <stdlib.h>
 
-#include "/Users/john/src/tcl8.5.9/generic/tcl.h"
+#include "/home/john/pkg/tcl8.6b2/generic/tcl.h"
 #include "tpool.h"
 
 
@@ -17,13 +17,13 @@ int main() {
 
     TPool *tp = TPoolInit(5);
 
-    TPoolThreadStart(tp, work, 1);
-    TPoolThreadStart(tp, work, 2);
-    TPoolThreadStart(tp, work, 3);
-    TPoolThreadStart(tp, work, 4);
-    TPoolThreadStart(tp, work, 5);
-    TPoolThreadStart(tp, work, 6);
-    TPoolThreadStart(tp, work, 7);
+    TPoolThreadStart(tp, (TPoolWork) work, (void *) 1);
+    TPoolThreadStart(tp, (TPoolWork) work, (void *) 2);
+    TPoolThreadStart(tp, (TPoolWork) work, (void *) 3);
+    TPoolThreadStart(tp, (TPoolWork) work, (void *) 4);
+    TPoolThreadStart(tp, (TPoolWork) work, (void *) 5);
+    TPoolThreadStart(tp, (TPoolWork) work, (void *) 6);
+    TPoolThreadStart(tp, (TPoolWork) work, (void *) 7);
 
     sleep(10);
 

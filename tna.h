@@ -24,6 +24,7 @@ typedef struct _Register {
 	int	_int;
 	uint	_uint;
 	long	_long;
+	ulong	_ulong;
 	float	_float;
 	double	_double;
     } value;

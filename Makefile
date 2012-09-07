@@ -1,16 +1,19 @@
 
+all: tna nproc
 
 tna:	tna.h tna.critcl tna-tcl.tcl expression.tcl functional.tcl tcloo.tcl
 	unsource tna.critcl > tna.tcl
-	critcl3.kit -force -pkg tna 
-	rm tna.tcl
+	critcl3 -force -pkg tna 
+	#rm tna.tcl
 
+nproc:
+	critcl3 -force -pkg nproc 
 
 test: FORCE
 	./tna-test.tcl
 
 clean:
-	rm tna.tcl
+	rm -f tna.tcl
 
 timing:
 	cd comparison; ./compare

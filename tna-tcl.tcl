@@ -19,7 +19,13 @@ oo::class create tna::thing {
 		 uchar  { set row [map value $row { expr { $value &        0xFF } }] }
 		 ushort { set row [map value $row { expr { $value &      0xFFFF } }] }
 		 uint   { set row [map value $row { expr { $value &  0xFFFFFFFF } }] }
-		 ulong  { set row [map value $row { expr { $value &  0xFFFFFFFF } }] }
+		 ulong  {
+		    if { [::tna::sizeof_long] == 4 } {
+			set row [map value $row { expr { $value &        0xFFFFFFFF } }]
+		    } else {
+			set row [map value $row { expr { $value &  0xFFFFFFFFFFFFFFFF } }]
+		    }
+		 }
 		}
 		
 		return $row
@@ -160,6 +166,7 @@ namespace eval tna {
 	       int  int 		int     %d 	int	Tcl_GetIntFromObj	i
 	      uint "unsigned int"	long    %u 	long	Tcl_GetLongFromObj	i 
 	      long "long"		long   %ld 	long	Tcl_GetLongFromObj	i 
+	     ulong "unsigned long"	long   %lu 	long	Tcl_GetLongFromObj	i
 	     float  float		double  %f 	double	Tcl_GetDoubleFromObj	f 
 	    double  double		double  %f 	double	Tcl_GetDoubleFromObj	d 
     }
@@ -568,7 +575,7 @@ namespace eval tna {
 	    lassign $instr I R0 R1 R2
 
 	    append listing [format " %4d  %25s  %10s %10s %10s\n"	\
-	    	[incr n] $OpcodesR($I) [lindex $regs $R0 3] [lindex $regs $R1 3] [lindex $regs $R2 3]]
+	    	[incr n] [format %4d $I] $OpcodesR($I) [lindex $regs $R0 3] [lindex $regs $R1 3] [lindex $regs $R2 3]]
 	}
 
 	return $listing

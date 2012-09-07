@@ -7,8 +7,9 @@ package require tcltest
 lappend auto_path lib
 
 package require tna
+package require nproc
 
-tna::nthread 2
+tna::nthread [nproc]
 
 cd [file dirname [file normalize [info script]]]/test
 
