@@ -6,11 +6,12 @@ lappend auto_path ../lib
 
 package require tna
 
-
 tna::array create a double 2048 2048
 tna::array create b double 2048 2048
 tna::array create c double 2048 2048
 tna::value create d double 0
+
+tna::nthread 4
 
 tna::expr {
     a = X+Y

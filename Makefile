@@ -15,6 +15,9 @@ clean:
 timing:
 	cd comparison; ./compare
 
+time:
+	cd comparison; time ./tna-time.tcl
+
 
 # Install ActiveState python
 #    pypm install numpy

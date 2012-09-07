@@ -251,7 +251,11 @@ namespace eval tna {
 
     critcl::ccode {
 
-	void slice_thr(Machine *machine) { slice_run(machine, machine->nd); }
+	void slice_thr(Machine *machine) {
+	    //printf("Run %p\n", machine);
+	    slice_run(machine, machine->nd);
+	    //printf("Don %p\n", machine);
+	}
 	void slice_run(Machine *machine, int dim)
 	{
 		short *program = machine->program;
@@ -606,6 +610,13 @@ namespace eval tna {
 	    m[0].nd	   = ndim;
 	    
 	    for ( k = 1; k < nthread; k++ ) {
+		memcpy(dims[k], dims[k-1], NDIM*sizeof(int));
+		memcpy(zero[k], zero[k-1], NDIM*sizeof(int));
+
+		dims[k  ][ndim-1] = dims[k-1][ndim-1];
+		zero[k  ][ndim-1] = zero[k-1][ndim-1] + 1;
+		dims[k-1][ndim-1] = zero[k  ][ndim-1];
+
 		regs = malloc(nregs*sizeof(Register));
 		memcpy(regs, m[0].registers, nregs*sizeof(Register));
 
@@ -643,7 +654,7 @@ namespace eval tna {
 		m[k].dims      = dims[k];
 		m[k].nd	       = ndim;
 
-		thr[k] = TPoolThreadStart(tp, slice_thr, &m);
+		thr[k] = TPoolThreadStart(tp, slice_thr, &m[k]);
 	    }
 
 	    slice_thr(&m[0]);
