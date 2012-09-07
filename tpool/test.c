@@ -1,14 +1,14 @@
 
 #include <stdlib.h>
 
-#include "/home/john/pkg/tcl/generic/tcl.h"
+#include "/Users/john/src/tcl8.5.9/generic/tcl.h"
 #include "tpool.h"
 
 
 TPoolWork *work(void *data) {
-    printf("Here %d\n", data);
+    printf("Here %p\n", data);
     sleep(data);
-    printf("Thread %d\n", data);
+    printf("Thread %p\n", data);
 }
 
 
@@ -17,13 +17,13 @@ int main() {
 
     TPool *tp = TPoolInit(5);
 
-    TPoolStart(tp, work, 1);
-    TPoolStart(tp, work, 2);
-    TPoolStart(tp, work, 3);
-    TPoolStart(tp, work, 4);
-    TPoolStart(tp, work, 5);
-    TPoolStart(tp, work, 6);
-    TPoolStart(tp, work, 7);
+    TPoolThreadStart(tp, work, 1);
+    TPoolThreadStart(tp, work, 2);
+    TPoolThreadStart(tp, work, 3);
+    TPoolThreadStart(tp, work, 4);
+    TPoolThreadStart(tp, work, 5);
+    TPoolThreadStart(tp, work, 6);
+    TPoolThreadStart(tp, work, 7);
 
     sleep(10);
 
