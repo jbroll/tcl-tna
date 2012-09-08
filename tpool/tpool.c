@@ -51,7 +51,7 @@ TPool *TPoolInit(int n) {
     for ( i = 0; i < n; i++ ) {
 	tp->thread[i].work = 1;
 	tp->thread[i].tp   = tp;
-	Tcl_CreateThread(&tp->thread[n].id, TPoolWorker, &tp->thread[i], TCL_THREAD_STACK_DEFAULT, TCL_THREAD_NOFLAGS);
+	Tcl_CreateThread(&tp->thread[i].id, TPoolWorker, &tp->thread[i], TCL_THREAD_STACK_DEFAULT, TCL_THREAD_NOFLAGS);
     }
     for ( i = 0; i < n; i++ ) {
 	TPoolThread *t = &tp->thread[i];

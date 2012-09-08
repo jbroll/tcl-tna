@@ -21,7 +21,7 @@ oo::class create tna::thing {
 		 uint   { set row [map value $row { expr { $value &  0xFFFFFFFF } }] }
 		 ulong  {
 		    if { [::tna::sizeof_long] == 4 } {
-			set row [map value $row { expr { $value &        0xFFFFFFFF } }]
+			set row [map value $row { expr { $value &          0xFFFFFFFF } }]
 		    } else {
 			set row [map value $row { expr { $value &  0xFFFFFFFFFFFFFFFF } }]
 		    }
@@ -505,6 +505,8 @@ namespace eval tna {
 	return $Code
     }
     proc expr { expr } {
+	set expr  [regsub -all -line -- {((^[ \t]*)|([ \t]+))#.*$} $expr  { }] 
+
 	set code [compile $expr]
 	if { $::tna::debug } {
 	    foreach stmt $code {

@@ -41,6 +41,7 @@ foreach { types map } { { char uchar short ushort int uint long } {} { float dou
     }
 }
 
+
 # Test "", :, *
 # Test single index
 # Test -x,-y index from end

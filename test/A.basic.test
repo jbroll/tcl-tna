@@ -6,6 +6,17 @@ package require tna
 
 source tna-helpers.tcl
 
+
+::tcltest::test comment-1.0 { comment1 } -body {
+    tna::array create a int 3 3
+
+    tna::expr { # Comment at start
+		a = 3 	# Following comment}
+    a list
+} -cleanup {
+    a destroy
+} -result  [matrix 3 3 3]
+
 foreach { types result } { { char uchar short ushort int uint long ulong } 3 { float double } 3.0 } {
     foreach type $types {
 	::tcltest::test 3x3-$type-1.0 { Simple array math } -body {

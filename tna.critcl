@@ -6,8 +6,7 @@ critcl::tsources tna.tcl	 			; # This file is a tcl source file for the package.
 critcl::cheaders tna.h tpool/tpool.h
 critcl::csources tpool/tpool.c
 
-#critcl::cflags -O3
-critcl::cflags -g -DTCL_THREADS=1
+critcl::cflags -O3 -DTCL_THREADS=1
 critcl::clibraries -lm
 
 source tcloo.tcl
@@ -95,8 +94,8 @@ namespace eval tna {
 	#
 	critcl::cproc sizeof_$type {} int [subst { return sizeof($ctype); }]
 	critcl::cproc malloc_$type { long size } long [subst {
-	    void *buff = calloc(size*sizeof($ctype), 1);
-	    //printf("malloc %p\\n", buff);
+	    void *buff = calloc(size, sizeof($ctype));
+	    //printf("malloc %p %d\\n", buff, size*sizeof($ctype));
 
 	    return (long) buff;
 	}]
@@ -665,7 +664,9 @@ namespace eval tna {
     }]
 
     critcl::cproc bytes { Tcl_Interp* ip long data int size } ok {
+	//printf("bytes : %p %d\n", data, size);
 	Tcl_SetObjResult(ip, Tcl_NewByteArrayObj((void *)data, size));
+	//printf("set : %p %d\n", data, size);
 
 	return TCL_OK;
     }
