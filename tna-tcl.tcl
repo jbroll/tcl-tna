@@ -316,6 +316,8 @@ namespace eval tna {
 	}
     }
 
+    proc deref { args } { return * }
+
     proc assign { op a b } {
 	variable regs
 	variable text
@@ -365,7 +367,6 @@ namespace eval tna {
     interp alias {} ::tna::dec  {} ::tna::uniop
     interp alias {} ::tna::uinc {} ::tna::uniop
     interp alias {} ::tna::udec {} ::tna::uniop
-    interp alias {} ::tna::usub {} ::tna::uniop
     interp alias {} ::tna::uadd {} ::tna::uniop
 
     proc uniop { op a } {
@@ -399,6 +400,11 @@ namespace eval tna {
 	 uadd { return $a }
 	 usub { binop $op $a 0 }
 	}
+    }
+    proc usub { op a } {
+	if { $a eq "*" } { return "-*" }
+
+	tailcall uniop $op $a
     }
 
     interp alias {} ::tna::add  {} ::tna::binop

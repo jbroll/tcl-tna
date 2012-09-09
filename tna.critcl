@@ -185,21 +185,12 @@ namespace eval tna {
 
 	    if ( r->axis[d].size <= 0 ) { return; }		// no need to adjust offset of a Value or temp register.
 
-	    if ( r->axis[d].incr >= 0 ) {
-		r->offs[d] = ((char *)r->offs[d+1])			// Adjust offset into Array type.
-			    + ((r->axis[d].star+((x*r->axis[d].incr)
-			    %   r->axis[d].size))
-			    %   r->axis[d].dims)
-			    *   r->axis[d].step
-			    *   SizeOf[r->type];
-	    } else {
-		r->offs[d] = ((char *)r->offs[d+1])			// Adjust offset into Array type.
-			    + ((r->axis[d].star+(((x-1)*r->axis[d].incr)
-			    %   r->axis[d].size))
-			    %   r->axis[d].dims)
-			    *   r->axis[d].step
-			    *   SizeOf[r->type];
-	    }
+	    r->offs[d] = ((char *)r->offs[d+1])			// Adjust offset into Array type.
+			+ ((r->axis[d].star+((x*r->axis[d].incr)
+			%   r->axis[d].size))
+			%   r->axis[d].dims)
+			*   r->axis[d].step
+			*   SizeOf[r->type];
 
 		if ( 0 ) {
 		    printf("_off %p %d %p : %p, star %ld x %d incr %ld size %ld dims %ld step %ld type %d\n"
@@ -512,7 +503,11 @@ namespace eval tna {
 			free(regs);
 			return TCL_ERROR;
 		    }
-		    regs[i].axis[s].size = thisInt - regs[i].axis[s].star + 1;
+		    if ( regs[i].axis[s].star <= thisInt ) {
+			regs[i].axis[s].size = thisInt - regs[i].axis[s].star + 1;
+		    } else {
+			regs[i].axis[s].size = thisInt - regs[i].axis[s].star - 1;
+		    }
 
 		    if ( Tcl_GetIntFromObj(ip, sliceObjv[2], &thisInt ) == TCL_ERROR ) {
 			free(regs);

@@ -10,6 +10,9 @@ Allow bald pointers and byte arrays
     array a x y -data [fitsy read $file,2 data]
 
 
+List subsections
+
+
 Reverse slices
     Assignment alias detection
 

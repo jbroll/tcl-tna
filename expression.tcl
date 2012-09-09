@@ -25,7 +25,7 @@
 	--u	{   30		 1	right	udec  }
 	 -u	{   30		 1	right	usub  }
 	 +u	{   30		 1	right	uadd  }
-	 *u	{   30		 1	right	deref }
+	 *u	{   30		 0	right	deref }
 	 $u	{   30		 1	right	dolar }
 	 &u	{   30		 1	right	refer }
 	 *	{   50		 2	left	mul   }
