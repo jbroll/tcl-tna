@@ -1,0 +1,14 @@
+
+Tcl Numeric Arrays : TNA 
+
+This is a package to do arithmetic on arrays on numbers.  It is similar to sevaral 
+other packages including:
+
+   * [narray] : [http://www.ncnr.nist.gov/staff/nickm/narray.html]
+   * [NAP] : [tcl-nap.sourceforge.net]
+   *
+
+TNA is coded in C and Tcl using critcl to glue it into a loadable Tcl package.  It is a follow up to 
+my experimental [Numeric arrays in pure Tcl] prototype.
+
+

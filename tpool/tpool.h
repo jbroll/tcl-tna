@@ -1,8 +1,8 @@
 
 
-typedef void (*TPoolWork)(void *data);
+ typedef void (*TPoolWork)(void *data);
 
-typedef struct _TPoolThread {
+ typedef struct _TPoolThread {
     struct _TPool *tp;
     Tcl_ThreadId   id;
     TPoolWork    func;
@@ -12,17 +12,17 @@ typedef struct _TPoolThread {
 
     void	*data;
     int		 work;
-} TPoolThread;
+ } TPoolThread;
 
-typedef struct _TPool {
+ typedef struct _TPool {
     Tcl_Mutex     lock;
     Tcl_Condition wait;
 
     int		next;
     int         nthread;
     TPoolThread *thread;
-} TPool;
-
-TPool *TPoolInit(int n);
-TPoolThread *TPoolThreadStart(TPool *tp, TPoolWork func, void *data);
-TPoolThread *TPoolThreadWair (TPoolThread *t);
+ } TPool;
+ 
+ TPool *TPoolInit(int n);
+ TPoolThread *TPoolThreadStart(TPool *tp, TPoolWork func, void *data);
+ TPoolThread *TPoolThreadWair (TPoolThread *t);

@@ -15,6 +15,13 @@
     # C++ precedence by 10.  This should allow applications to add other
     # operators as needed at any preceduce required.
     #
+    # The unary * has been changes to nulary to support tna
+    #
+    # The index [] operator is nary and treated similarly to a function call to "indx" instead
+    # of "call".
+    #
+    # dolar "$" is added for eventaul support of tcl variables in tna.
+    #
     set optable {
         ::	{   10		 2	left	name  }
 	++	{   20		 1	left	inc   }

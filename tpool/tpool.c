@@ -1,16 +1,16 @@
-/* Simple thread pool manager
+ /* Simple thread pool manager
  
    John Roll 2012
-*/
+ */
 
-#include <stdlib.h>
+ #include <stdlib.h>
 
-#define TCL_THREADS 1
+ #define TCL_THREADS 1
 
-#include "tcl.h"
-#include "tpool.h"
+ #include "tcl.h"
+ #include "tpool.h"
 
-void TPoolWorker(void *data) {
+ void TPoolWorker(void *data) {
     TPoolThread *t = (TPoolThread *) data;
     TPool       *tp = t->tp;
     int i_have_work;
@@ -40,9 +40,9 @@ void TPoolWorker(void *data) {
 	    Tcl_MutexUnlock(&tp->lock);
 	}
     }
-}
+ }
 
-TPool *TPoolInit(int n) {
+ TPool *TPoolInit(int n) {
     int    i;
     TPool *tp  = calloc(sizeof(TPool), 1);
     tp->thread = calloc(sizeof(TPoolThread), n);
@@ -64,10 +64,10 @@ TPool *TPoolInit(int n) {
     }
 
     return tp;
-}
+ }
 
 
-TPoolThread *TPoolThreadStart(TPool *tp, TPoolWork func, void *data) {
+ TPoolThread *TPoolThreadStart(TPool *tp, TPoolWork func, void *data) {
     int start = tp->next;
 
     Tcl_MutexLock(&tp->lock);
@@ -98,9 +98,9 @@ TPoolThread *TPoolThreadStart(TPool *tp, TPoolWork func, void *data) {
 
 	return t;
     }
-}
+ }
 
-TPoolThreadWait(TPoolThread *t) {
+ TPoolThreadWait(TPoolThread *t) {
     Tcl_MutexLock(&t->lock);
 
     while ( t->work ) {
@@ -108,4 +108,4 @@ TPoolThreadWait(TPoolThread *t) {
     }
 
     Tcl_MutexUnlock(&t->lock);
-}
+ }

@@ -30,8 +30,8 @@ Move parts of execute into compile
     Add dimensions component to compiled code 
     returning a triple (dims, regs, text).
 
-    Add compiler epochs to track definitions
-    of arrays and values and cache string to code
+    Add compiler epochs to track definitions of arrays
+    and values and cache string to code conversion
 
 
 Tcl variable access.
