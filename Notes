@@ -10,6 +10,13 @@ Allow bald pointers and byte arrays
     array a x y -data [fitsy read $file,2 data]
 
 
+Broadcast checking
+	struct
+	tile
+	any
+
+
+
 List subsections
 
 
@@ -28,6 +35,8 @@ Move parts of execute into compile
 
 
 Tcl variable access.
+
+Memory leakage
 
 
 

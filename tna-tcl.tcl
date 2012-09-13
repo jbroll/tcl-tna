@@ -84,49 +84,56 @@ oo::class create tna::array {
 
     method list  {} { return [my list-helper [my bytes] [lreverse $dims] 0] }
 
-    method indx { { xindx {} } } {			  # Parse the slice syntax into a list.
+    method indx { { XIndx {} } } {			  # Parse the slice syntax into a list.
+	try {
+	    if { $indx eq "ZYX" } { set XIndx [lreverse $XIndx] }
 
-	if { $indx eq "ZYX" } { set xindx [lreverse $xindx] }
-
-	foreach d $dims x $xindx o $offs {
-	    if { $d eq {} } { break }
-
-	    set xindx [split $x :]
-
-	    if { $x == "" || $x == "*" || $x == ":" } {
-		set s $o
-		set e [::expr { $d - 1 + $o }]
-		set i 1
-	    } elseif { $x == "-*" } {
-		set s [::expr { $d - 1 + $o }]
-		set e $o
-		set i 1
-	    } elseif { [llength $xindx] == 1 } {
-		set s $xindx
-
-		if { $s < 0 } { set s [::expr { $d + $s }] }
-
-		set e $s
-		set i 1
-	    } else {
-		set e {}
-		set i {}
-
-		lassign $xindx s e i
-
-		if { $s eq {} } { set s $o 	   }
-		if { $e eq {} } { set e [::expr { $d - 1 + $o }] }
-		if { $i eq {} } { set i  1 	   }
-
-		if { $s < 0 } { set s [::expr { $d + $s }] }
-		if { $e < 0 } { set e [::expr { $d + $e }] }
+	    if { [llength $XIndx] && [llength $XIndx] != [llength $dims] } {
+		error "array has [llength $dims] dims : [llength $XIndx] given"
 	    }
-	    set s [::expr { $s - $o }]
-	    set e [::expr { $e - $o }]
 
-	    lappend list [list $s $e $i]
+	    foreach d $dims x $XIndx o $offs {
+		if { $d eq {} } { break }
+
+		set xindx [split $x :]
+
+		if { $x == "" || $x == "*" || $x == ":" } {
+		    set s $o
+		    set e [::expr { $d - 1 + $o }]
+		    set i 1
+		} elseif { $x == "-*" } {
+		    set s [::expr { $d - 1 + $o }]
+		    set e $o
+		    set i 1
+		} elseif { [llength $xindx] == 1 } {
+		    set s $xindx
+
+		    if { $s < 0 } { set s [::expr { $d + $s }] }
+
+		    set e $s
+		    set i 1
+		} else {
+		    set e {}
+		    set i {}
+
+		    lassign $xindx s e i
+
+		    if { $s eq {} } { set s $o 	   }
+		    if { $e eq {} } { set e [::expr { $d - 1 + $o }] }
+		    if { $i eq {} } { set i  1 	   }
+
+		    if { $s < 0 } { set s [::expr { $d + $s }] }
+		    if { $e < 0 } { set e [::expr { $d + $e }] }
+		}
+		set s [::expr { $s - $o }]
+		set e [::expr { $e - $o }]
+
+		lappend list [list $s $e $i]
+	    }
+
+	} on error message {
+	    error "cannot convert $xindx to indx : $message"
 	}
-
 	return $list
     }
 }
@@ -285,6 +292,8 @@ namespace eval tna {
 
     proc indx  { op name args } {
 	variable regs
+
+	register $name $name
 
 	if { [info commands $name] eq {} } {
 	    error "only an array can be indexed"
@@ -489,24 +498,24 @@ namespace eval tna {
 	::array unset regs
 	set regs(0) [list 0 any @0 0 0 : $::tna::ItemsX(const) $::tna::TypesX(int) {} {}]
     }
-    proc exprSave {} {
+    proc exprSave { { any 0 } } {
 	variable Code
 	variable regs
 	variable text
 
-	if { $text ne {} } {
+	if { $any || $text ne {} } {
 	    lappend Code [list [lsort -real -index 0 [map { name values } [::array get regs] { I $values }]] $text]
 	}
 
 	exprStart
     }
 
-    proc compile { expr } {
+    proc compile { expr { any 0 } } {
 	variable Code {}
 
 	exprStart
 	expression::parse $expr [expression::prep-tokens $::expression::optable] $::expression::optable ::tna::Compile
-	exprSave
+	exprSave $any
 
 	return $Code
     }

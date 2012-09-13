@@ -11,22 +11,41 @@ source tna-helpers.tcl
 
 foreach { types fmt } { { char uchar short ushort int uint long ulong } %d { float double } %.1f } {
     foreach type $types {
-	::tcltest::test section-1 "Section * and alisses $type" -body {
-	    tna::array create a $type 4 4
-	    tna::array create b $type 4 4
+	foreach { x y } { 1 1 2 2 3 3 4 4 5 5 10 10 25 25 63 63 2 3 3 2 5 2 2 5 } {
+	    ::tcltest::test section-1 "Section -* and alisses $type : $x $y" -body {
+		tna::array create a $type $x $y
+		tna::array create b $type $x $y
 
-	    tna::expr { a =    X+Y }
-	    tna::expr { b[-*,] = a }
+		tna::expr { a =    X+Y }
+		tna::expr { b[-*,*] = a }
 
-	    b list
-	} -cleanup {
-	    a destroy
-	    b destroy
-	} -result  [matrix-eval $fmt X+Y 4 4]
+		b list
+	    } -cleanup {
+		a destroy
+		b destroy
+	    } -result  [matrix-eval $fmt (($x-1)-X)+Y $x $y]
+        }
     }
 }
 
-exit
+foreach { types fmt } { { char uchar short ushort int uint long ulong } %d { float double } %.1f } {
+    foreach type $types {
+	foreach { x y } { 1 1 2 2 3 3 4 4 5 5 10 10 25 25 63 63 2 3 3 2 5 2 2 5 } {
+	    ::tcltest::test section-1 "Section -* and alisses $type : $x $y" -body {
+		tna::array create a $type $x $y
+		tna::array create b $type $x $y
+
+		tna::expr { a =    X+Y }
+		tna::expr { b[:,-*] = a }
+
+		b list
+	    } -cleanup {
+		a destroy
+		b destroy
+	    } -result  [matrix-eval $fmt X+($y-1)-Y $x $y]
+        }
+    }
+}
 
 proc T {matrix} {							# http://wiki.tcl.tk/2748
     set res {}
