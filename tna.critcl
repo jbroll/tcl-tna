@@ -100,6 +100,8 @@ namespace eval tna {
 	    return (long) buff;
 	}]
 
+	critcl::cproc newByteArray { long size } Tcl_Obj* { return Tcl_NewByteArrayObj(NULL, size); }
+
 	# Add typedefs for any that are not C primitive types
 	#
 	if { $type ne $ctype } { critcl::ccode "typedef $ctype $type;\n" }
