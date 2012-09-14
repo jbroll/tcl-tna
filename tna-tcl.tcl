@@ -52,8 +52,8 @@ oo::class create tna::thing {
     method print { { fp stdout } } { puts $fp [my list] }
 }
 oo::class create tna::array {
-    variable type dims data size offs indx indxDefault
-    accessor type dims data size offs indx indxDefault
+    variable type dims data size drep offs indx indxDefault
+    accessor type dims data size drep offs indx indxDefault
 
     superclass tna::thing
 
@@ -64,13 +64,18 @@ oo::class create tna::array {
 	    lappend dims [lindex $args 0]
 	    set args [lrange $args 1 end]
 	}
-	array set options [list -offset { 0 } -index $indxDefault]
+	array set options [list -offset { 0 } -index $indxDefault -inclusive 1 -data {} -ptr 0]
 	array set options $args
 
 	set type $Type
 	set size 1
 	set offs $options(-offset)
 	set indx $options(-index)
+	set incl $options(-inclusive)
+	set data $options(-data)
+	set ptr  $options(-ptr)
+
+	set drep ptr
 
 	if { [llength $offs] == 1 } {
 	    set offs [lrepeat [llength $dims] $options(-offset)]
@@ -138,8 +143,8 @@ oo::class create tna::array {
     }
 }
 oo::class create tna::value {
-    variable type dims data size offs
-    accessor type dims data size offs
+    variable type dims data size drep offs
+    accessor type dims data size drep offs
 
     superclass tna::thing
 
@@ -148,7 +153,8 @@ oo::class create tna::value {
 	set dims { 1 }
 	set offs { 0 }
 	set size 1
-	set data  [tna::malloc_$type $size]
+	set data [tna::malloc_$type $size]
+	set drep ptr
     }
     method list  {} { return [my list-helper [my bytes] 1 0] }
     method indx  { args } { return [list [list 0 0 0]] }
@@ -200,7 +206,6 @@ namespace eval tna {
 	} else {
 	    lassign $regs($name-$suggestType) reg typ itm dat
 	}
-
     }
 
     proc tempreg { type { regtype temp } } {
@@ -213,7 +218,7 @@ namespace eval tna {
 	    set reg [string range $name 1 end]
 	}
 
-	set ::tna::regs($name) [list $reg $type $regtype $name $regtype : $::tna::ItemsX(temp) $::tna::TypesX($type) {} {}]
+	set ::tna::regs($name) [list $reg $type $regtype $name : temp $regtype $::tna::ItemsX(temp) $::tna::TypesX($type) {} {}]
 
 	return $reg
     }
@@ -231,11 +236,13 @@ namespace eval tna {
 	    set data [$name data]
 	    set type [$name type]
 	    set dims [$name dims]
+	    set drep [$name drep]
 
 	    set slic [$name indx]
 	    set item tna
 	} elseif { [string is int    $value] } {
 	    set data $value
+	    set drep  value
 	    if { $type eq {} } {
 		set type int
 	    } else {
@@ -243,21 +250,23 @@ namespace eval tna {
 	    }
 	} elseif { [string is double $value] } {
 	    set data $value
+	    set drep  value
 	    if { $type eq {} } {
 		set type double
 	    } else {
 		set name $name-$type
 	    }
 	} elseif { $name in $::tna::Axes } {
-	   set type int
-	   set item cntr
-	   set data [::expr -([lsearch $::tna::Axes $name]+1)]
+	    set type int
+	    set item cntr
+	    set data [::expr -([lsearch $::tna::Axes $name]+1)]
+	    set drep  cntr
 	} else {
 	    error "unknown identifier : $name"
 	}
 
 	set ::tna::regs($name) 	\
-	    [list [incr ::tna::nreg] $type $item $name $data : $::tna::ItemsX($item) $::tna::TypesX($type) $dims $slic]
+	    [list [incr ::tna::nreg] $type $item $name : $drep $data $::tna::ItemsX($item) $::tna::TypesX($type) $dims $slic]
     }
     proc register-type { name } { return [lindex ::tna::regs($name) 1] }
 
@@ -303,7 +312,7 @@ namespace eval tna {
 
 	set reg [tempreg int]
 
-	foreach i { 1 2 4 6 7 8 } {
+	foreach i { 1 2 6 7 8 9 10 } {
 	    lset regs(@$reg) $i [lindex $regs($name) $i]
 	}
 
@@ -381,7 +390,7 @@ namespace eval tna {
     proc uniop { op a } {
 	variable text
 
-	lookup $a regA typeA itemA dataA
+	lookup $a regA typeA itemA -
 
 	switch $op {
 	 dec - udec { set incr -1 }
@@ -496,7 +505,7 @@ namespace eval tna {
 	variable reglist {}
 
 	::array unset regs
-	set regs(0) [list 0 any @0 0 0 : $::tna::ItemsX(const) $::tna::TypesX(int) {} {}]
+	set regs(0) [list 0 any @0 0 : 0 0 $::tna::ItemsX(const) $::tna::TypesX(int) {} {}]
     }
     proc exprSave { { any 0 } } {
 	variable Code
@@ -525,6 +534,11 @@ namespace eval tna {
 	set code [compile $expr]
 	if { $::tna::debug } {
 	    foreach stmt $code {
+		    puts ""
+		    puts ""
+		puts [join [lindex $stmt 0] \n]
+		    puts ""
+		puts [join [lindex $stmt 1] \n]
 		puts [::tna::disassemble {*}$stmt] 
 	    }
 	}
@@ -571,7 +585,7 @@ namespace eval tna {
 	append listing	"#\n"
 
 	foreach r $regs {
-	    lassign $r n type item name data : i t dims slice
+	    lassign $r n type item name : drep data i t dims slice
 
 	    switch $item {
 		none -
@@ -591,7 +605,7 @@ namespace eval tna {
 	foreach { instr } $text {
 	    lassign $instr I R0 R1 R2
 
-	    append listing [format " %4d  %25s  %10s %10s %10s\n"	\
+	    append listing [format " %4d    %4d %25s  %10s %10s %10s\n"	\
 	    	[incr n] [format %4d $I] $OpcodesR($I) [lindex $regs $R0 3] [lindex $regs $R1 3] [lindex $regs $R2 3]]
 	}
 

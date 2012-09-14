@@ -100,8 +100,6 @@ namespace eval tna {
 	    return (long) buff;
 	}]
 
-	critcl::cproc newByteArray { long size } Tcl_Obj* { return Tcl_NewByteArrayObj(NULL, size); }
-
 	# Add typedefs for any that are not C primitive types
 	#
 	if { $type ne $ctype } { critcl::ccode "typedef $ctype $type;\n" }
@@ -115,6 +113,8 @@ namespace eval tna {
 	critcl::ccode "#define TNA_TYPE_$type $i"
 	append TypeCases "case TNA_TYPE_$type:	r->value._$type = x;	break;\n"
     }
+
+    critcl::cproc newByteArray { long size } Tcl_Obj* { return Tcl_NewByteArrayObj(NULL, size); }
 
     critcl::ccode [template:subst {
 
@@ -372,15 +372,15 @@ namespace eval tna {
 
 	    if ( Tcl_ListObjGetElements(ip, regsObjv[i], &regObjc, &regObjv) == TCL_ERROR ) { return TCL_ERROR; }
 
-	    // reg typ itm : obj dat dim slice
+	    // reg typ item name : drep data obj dat dim slice
 	    //
-	    if ( Tcl_GetIntFromObj( ip, regObjv[6], &itemType ) == TCL_ERROR ) {
+	    if ( Tcl_GetIntFromObj( ip, regObjv[7], &itemType ) == TCL_ERROR ) {
 		free(regs);
 		return TCL_ERROR;
 	    }
 	    regs[i].item = itemType;
 
-	    if ( Tcl_GetIntFromObj( ip, regObjv[7], &dataType ) == TCL_ERROR ) {
+	    if ( Tcl_GetIntFromObj( ip, regObjv[8], &dataType ) == TCL_ERROR ) {
 		free(regs);
 		return TCL_ERROR;
 	    }
@@ -395,7 +395,7 @@ namespace eval tna {
 	    switch ( itemType ) {
 	     case TempRegister: slice_reg(&regs[i], dataType);	 break;
 	     case CntrRegister:
-		if ( Tcl_GetLongFromObj( ip, regObjv[4], &data ) == TCL_ERROR ) {
+		if ( Tcl_GetLongFromObj( ip, regObjv[6], &data ) == TCL_ERROR ) {
 		    free(regs);
 		    return TCL_ERROR;
 		}
@@ -412,7 +412,7 @@ namespace eval tna {
 		     case TNA_TYPE_$type: {
 			$getType this;
 
-			if ( ${getFunc}(ip, regObjv[4], &this) == TCL_ERROR ) {
+			if ( ${getFunc}(ip, regObjv[6], &this) == TCL_ERROR ) {
 			    free(regs);
 			    return TCL_ERROR;
 			}
@@ -433,25 +433,26 @@ namespace eval tna {
 
 		regs[i].type = dataType;
 
-		if ( Tcl_GetLongFromObj( ip, regObjv[4], &data ) == TCL_ERROR ) {
+		if ( Tcl_GetLongFromObj( ip, regObjv[6], &regs[i].data ) == TCL_ERROR ) {
 		    free(regs);
 		    return TCL_ERROR;
 		}
-		regs[i].data = data;
-
 
 		/* Unpack the dims and slice data	*/
 
-		if ( Tcl_ListObjGetElements(ip, regObjv[8], &dObjc, &dObjv) == TCL_ERROR ) {
+		if ( Tcl_ListObjGetElements(ip, regObjv[9], &dObjc, &dObjv) == TCL_ERROR ) {
 		    free(regs);
 		    return TCL_ERROR;
 		}
-		if ( Tcl_ListObjGetElements(ip, regObjv[9], &sObjc, &sObjv) == TCL_ERROR ) {
+		if ( Tcl_ListObjGetElements(ip, regObjv[10], &sObjc, &sObjv) == TCL_ERROR ) {
 		    free(regs);
 		    return TCL_ERROR;
 		}
 
 		if ( sObjc != dObjc ) {
+		    printf("register %d : dims %d slice %d\n", i, dObjc, sObjc);
+		    fflush(stdout);
+
 		    Tcl_AddErrorInfo(ip, "dims and slice dimensions must match");
 		    free(regs);
 		    return TCL_ERROR;
