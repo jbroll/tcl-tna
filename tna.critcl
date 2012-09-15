@@ -433,9 +433,13 @@ namespace eval tna {
 
 		regs[i].type = dataType;
 
-		if ( Tcl_GetLongFromObj( ip, regObjv[6], &regs[i].data ) == TCL_ERROR ) {
-		    free(regs);
-		    return TCL_ERROR;
+		if ( !strcmp(Tcl_GetStringFromObj(regObjv[5], NULL), "ptr") ) {
+		    if ( Tcl_GetLongFromObj( ip, regObjv[6], &regs[i].data ) == TCL_ERROR ) {
+			free(regs);
+			return TCL_ERROR;
+		    }
+		} else {
+		    regs[i].data = Tcl_GetByteArrayFromObj(regObjv[6], NULL);
 		}
 
 		/* Unpack the dims and slice data	*/

@@ -2,7 +2,7 @@
 source expression.tcl
 
 oo::class create tna::thing {
-    variable type dims data size indxDefault
+    variable type dims data drep size indxDefault
 
     set indxDefault XYZ
 
@@ -44,7 +44,9 @@ oo::class create tna::thing {
 	return $reply
     }
     method destroy {} {
-	::tna::free $data
+	if { $drep eq "ptr" } {
+	    ::tna::free $data
+	}
 	next
     }
 
@@ -68,14 +70,12 @@ oo::class create tna::array {
 	array set options $args
 
 	set type $Type
-	set size 1
 	set offs $options(-offset)
 	set indx $options(-index)
 	set incl $options(-inclusive)
 	set data $options(-data)
 	set ptr  $options(-ptr)
 
-	set drep ptr
 
 	if { [llength $offs] == 1 } {
 	    set offs [lrepeat [llength $dims] $options(-offset)]
@@ -84,10 +84,22 @@ oo::class create tna::array {
 	    error "number of offsets and dimensions must match $offs : $dims"
 	}
 
+	set drep ptr
+	set size 1
 	set data [::tna::malloc_$type [red x $dims { set size [::expr $size*$x] }]]
+
+	#set drep bytes
+	#set size [::tna::sizeof_$type]
+	#set data [binary format x[red x $dims { set size [::expr $size*$x] }]]
     }
 
-    method list  {} { return [my list-helper [my bytes] [lreverse $dims] 0] }
+    method list  {} { 
+	if { $drep eq "ptr" } {
+	    return [my list-helper [my bytes] [lreverse $dims] 0]
+	} else {
+	    return [my list-helper $data      [lreverse $dims] 0]
+	}
+    }
 
     method indx { { XIndx {} } } {			  # Parse the slice syntax into a list.
 	try {
@@ -593,7 +605,13 @@ namespace eval tna {
 		temp  { append listing [format " %4d  %-8s %-14s  %8s\n" $n $item $name $type] }
 		cntr  { append listing [format " %4d  %-8s %-14s  %8s	%d\n" $n $item $name $type $data] }
 		const { append listing [format " %4d  %-8s %-14s  %8s	%f\n" $n $item $name $type $data] }
-		tna   { append listing [format " %4d  %-8s %-14s  %8s	0x%08x : %s %s\n" $n $item $name $type $data $dims $slice] }
+		tna   {
+		    if { $drep eq "ptr" } {
+			append listing [format " %4d  %-8s %-14s  %8s	0x%08x : %s %s\n" $n $item $name $type $data $dims $slice]
+		    } else {
+			append listing [format " %4d  %-8s %-14s  %8s	%10s : %s %s\n" $n $item $name $type bytes $dims $slice]
+		    }
+		}
 	    }
 	}
 	append listing	"#\n"
