@@ -26,9 +26,11 @@ Commands to create arrays and values:
  * tna::array
    Options
 
-     * -index
-     * -xyz
-     *
+     * -index <XYZ|ZYX>
+     * -offset x
+     * -inclusive yes
+     * -ptr  <bare pointer>
+     * -data <bytearray>
 
  * tna::value
 

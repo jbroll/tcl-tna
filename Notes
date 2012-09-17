@@ -1,4 +1,10 @@
 
+List subsections
+	a list 4:2,5:8
+
+Add inclusive/ exclusive sectioning
+
+
 Conversion from Tcl list value
     a set {{ 1 2 3 } { 4 5 6 } { 7 8 9 }}
 
@@ -6,26 +12,29 @@ ReShape
     a shape { 3 2 4 }
 
 
-Allow bald pointers and byte arrays
-    array a x y -data [fitsy read $file,2 data]
-
-
 Broadcast checking
-	struct
+	strict
 	tile
 	any
 
 
 
-List subsections
-
-Add inclusive/ exclusive sectioning
-
-
 Reverse slices
     Assignment alias detection
+      see if target is present in expression
+      see if sections overlap
+        warn user
+        copy onto target after execution to temp?
 
-    Working needs more tests.
+Function Calls
+
+Add function opcodes
+
+Specific indexing	a[Y+4,X] = b
+
+Tcl variable access.
+	variable is value register
+	insert value before execution
 
 
 Move parts of execute into compile
@@ -36,29 +45,7 @@ Move parts of execute into compile
     and values and cache string to code conversion
 
 
-Tcl variable access.
 
-Memory leakage
-
-
-
-# Tcl Numeric Array assembler
-#
-# Opcodes of the TNA machine are written in 3 address notation.  The assignment arrow reminds
-# everyone what the argument order is.  Otherwise it is syntacic sugar.  The second argument
-# to unary operators is ignored.  
-#
-# Arguments to opcodes must be declaried registers.  Registers may be decalired to contain
-# arrays, values, constants or then can be temporaries.  The expected types of registers must
-# match thier instructions.
-#
-#  opcode is one of the recognized operators:
-#
-#	set
-#	add sub mul div mod neg
-#	equ neq gt lt gte lte
-#	and or band borr bxor shl shr
-#	exp pow sin cos tan atan
 #
 # Index registers:
 #

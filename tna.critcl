@@ -86,6 +86,8 @@ namespace eval tna {
 	#include <math.h>
     }
 
+    critcl::cproc bap  { Tcl_Obj* bytes } long { return Tcl_GetByteArrayFromObj(bytes, NULL); }
+
     critcl::cproc free { long data } void { free((void *) data); }
 
     foreach { type ctype pType   pFmt    getType getFunc scan } $::tna::Types i [iota 1 [::expr [llength $::tna::Types]/7]] { 
@@ -93,12 +95,7 @@ namespace eval tna {
 	# Create a proc to allocate memory, and return the sizeof each type
 	#
 	critcl::cproc sizeof_$type {} int [subst { return sizeof($ctype); }]
-	critcl::cproc malloc_$type { long size } long [subst {
-	    void *buff = calloc(size, sizeof($ctype));
-	    //printf("malloc %p %d\\n", buff, size*sizeof($ctype));
-
-	    return (long) buff;
-	}]
+	critcl::cproc malloc_$type { long size } long [subst { return (long) calloc(size, sizeof($ctype)); }]
 
 	# Add typedefs for any that are not C primitive types
 	#
@@ -113,8 +110,6 @@ namespace eval tna {
 	critcl::ccode "#define TNA_TYPE_$type $i"
 	append TypeCases "case TNA_TYPE_$type:	r->value._$type = x;	break;\n"
     }
-
-    critcl::cproc newByteArray { long size } Tcl_Obj* { return Tcl_NewByteArrayObj(NULL, size); }
 
     critcl::ccode [template:subst {
 
@@ -433,13 +428,13 @@ namespace eval tna {
 
 		regs[i].type = dataType;
 
-		if ( !strcmp(Tcl_GetStringFromObj(regObjv[5], NULL), "ptr") ) {
+		if ( !strcmp(Tcl_GetStringFromObj(regObjv[5], NULL), "bytes") ) {
+		    regs[i].data = Tcl_GetByteArrayFromObj(regObjv[6], NULL);
+		} else {
 		    if ( Tcl_GetLongFromObj( ip, regObjv[6], &regs[i].data ) == TCL_ERROR ) {
 			free(regs);
 			return TCL_ERROR;
 		    }
-		} else {
-		    regs[i].data = Tcl_GetByteArrayFromObj(regObjv[6], NULL);
 		}
 
 		/* Unpack the dims and slice data	*/
@@ -624,8 +619,6 @@ namespace eval tna {
 		    if ( !regs[i].used ) { continue; }
 
 		    switch ( regs[i].item ) {
-
-
 		     case CntrRegister: {
 			int size = regs[i].axis[0].size;
 
@@ -659,7 +652,22 @@ namespace eval tna {
 
 	    slice_thr(&m[0]);
 
-	    for ( k = 1; k < nthread; k++ ) { TPoolThreadWait(thr[k]); }
+	    for ( k = 0; k < nthread; k++ ) {
+		if ( k ) { TPoolThreadWait(thr[k]); }
+
+		regs = m[k].registers;
+
+		for ( i = 0; i < nregs; i++ ) {
+		    if ( !regs[i].used ) { continue; }
+
+		    switch ( regs[i].item ) {
+		     case TempRegister: { free(regs[i].data);	 			break; }
+		    }
+		}
+
+		free(m[k].registers);
+	    }
+	    free(text);
 	}
 
 	return TCL_OK;

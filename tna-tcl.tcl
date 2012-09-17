@@ -61,21 +61,26 @@ oo::class create tna::array {
 
     constructor { Type args } {
 	classvar indxDefault XYZ
+	classvar edgeDefault incl
+	classvar offsDefault 1
 
 	while { [lindex $args 0] ne {} && [string is integer [lindex $args 0]] } {
 	    lappend dims [lindex $args 0]
 	    set args [lrange $args 1 end]
 	}
-	array set options [list -offset { 0 } -index $indxDefault -inclusive 1 -data {} -ptr 0]
+	array set options [list -index $indxDefault -edge $edgeDefault -offset $offsDefault -data {} -ptr 0]
 	array set options $args
 
 	set type $Type
 	set offs $options(-offset)
 	set indx $options(-index)
-	set incl $options(-inclusive)
+	set edge $options(-edge)
+
 	set data $options(-data)
 	set ptr  $options(-ptr)
 
+	if { $edge eq "excl" } { set edge 1
+	} else                 { set edeg 0 }
 
 	if { [llength $offs] == 1 } {
 	    set offs [lrepeat [llength $dims] $options(-offset)]
@@ -84,13 +89,22 @@ oo::class create tna::array {
 	    error "number of offsets and dimensions must match $offs : $dims"
 	}
 
-	set drep ptr
-	set size 1
-	set data [::tna::malloc_$type [red x $dims { set size [::expr $size*$x] }]]
-
-	#set drep bytes
-	#set size [::tna::sizeof_$type]
-	#set data [binary format x[red x $dims { set size [::expr $size*$x] }]]
+	if { $ptr == 1 } {
+	    set drep ptr
+	    set size 1
+	    set data [::tna::malloc_$type [red x $dims { set size [::expr $size*$x] }]]
+	} else {
+	    if { $ptr != 0 } {
+		set drep  ptr
+		set data $ptr
+	    } else {
+		set drep bytes
+		if { $data eq {} } {
+		    set size [::tna::sizeof_$type]
+		    set data [binary format x[red x $dims { set size [::expr $size*$x] }]]
+		}
+	    }
+	}
     }
 
     method list  {} { 
@@ -114,36 +128,38 @@ oo::class create tna::array {
 
 		set xindx [split $x :]
 
-		if { $x == "" || $x == "*" || $x == ":" } {
-		    set s $o
-		    set e [::expr { $d - 1 + $o }]
+		if { $x == "*" || $x == ":" } {
+		    set s 0
+		    set e [::expr { $d - 1 }]
 		    set i 1
 		} elseif { $x == "-*" } {
-		    set s [::expr { $d - 1 + $o }]
-		    set e $o
-		    set i 1
-		} elseif { [llength $xindx] == 1 } {
-		    set s $xindx
-
-		    if { $s < 0 } { set s [::expr { $d + $s }] }
-
-		    set e $s
+		    set s [::expr { $d - 1 }]
+		    set e 0
 		    set i 1
 		} else {
-		    set e {}
-		    set i {}
+		    if { [llength $xindx] == 1 } {
+			set s $xindx
 
-		    lassign $xindx s e i
+			if { $s < 0 } { set s [::expr { $d + $s }] }
 
-		    if { $s eq {} } { set s $o 	   }
-		    if { $e eq {} } { set e [::expr { $d - 1 + $o }] }
-		    if { $i eq {} } { set i  1 	   }
+			set e $s
+			set i 1
+		    } else {
+			set e {}
+			set i {}
 
-		    if { $s < 0 } { set s [::expr { $d + $s }] }
-		    if { $e < 0 } { set e [::expr { $d + $e }] }
-		}
-		set s [::expr { $s - $o }]
-		set e [::expr { $e - $o }]
+			lassign $xindx s e i
+
+			if { $s eq {} } { set s $o 	   }
+			if { $e eq {} } { set e [::expr { $d - 1 + $o + $edge }] }
+			if { $i eq {} } { set i  1 	   }
+
+			if { $s < 0 } { set s [::expr { $d + $s }] }
+			if { $e < 0 } { set e [::expr { $d + $e + $edge }] }
+
+			set s [::expr { $s - $o }]
+			set e [::expr { $e - $o - $edge }]
+		    }
 
 		lappend list [list $s $e $i]
 	    }
@@ -220,7 +236,7 @@ namespace eval tna {
 	}
     }
 
-    proc tempreg { type { regtype temp } } {
+    proc tempreg { type { regtype temp } } {		# Allocate a temp register
 	if { [llength $::tna::reglist] == 0 } {
 	    set reg   [incr ::tna::nreg]
 	    set name @$reg
@@ -234,12 +250,13 @@ namespace eval tna {
 
 	return $reg
     }
-    proc dispose { name } {
-	if { [string index $name 0] eq "@" && [lindex $::tna::regs($name) 2] eq "temp" } {
+    proc dispose { name } {				# Push temp register on list for reuse
+	if { [string index $name 0] eq "@"	\
+	  && [lindex $::tna::regs($name) 2] eq "temp" } {
 	    lappend ::tna::reglist $name
 	}
     }
-    proc register { name value { type {} } } {
+    proc register { name value { type {} } } {		# Allocate a register for a value of some type
 	set dims {}
 	set slic {}
 	set item const
@@ -283,7 +300,7 @@ namespace eval tna {
     proc register-type { name } { return [lindex ::tna::regs($name) 1] }
 
 
-    proc promote { c regc typec args } {
+    proc promote { c regc typec args } {		# Promote args to common widest type, emit conversion code
 	variable text
 
 	upvar $c C
@@ -311,7 +328,7 @@ namespace eval tna {
 	set C @$regC
     }
 
-    proc indx  { op name args } {
+    proc indx  { op name args } {			# bracket operator
 	variable regs
 
 	register $name $name
@@ -324,7 +341,7 @@ namespace eval tna {
 
 	set reg [tempreg int]
 
-	foreach i { 1 2 6 7 8 9 10 } {
+	foreach i { 1 2 5 6 7 8 9 10 } {
 	    lset regs(@$reg) $i [lindex $regs($name) $i]
 	}
 
@@ -333,7 +350,7 @@ namespace eval tna {
 	return @$reg
     }
 
-    proc suggest { a b } {
+    proc suggest { a b } {				# Suggest a type
 	if { [string is int $a] || [string is double $a]
 	  || [string is int $a] || [string is double $a]
 
@@ -348,7 +365,7 @@ namespace eval tna {
 
     proc deref { args } { return * }
 
-    proc assign { op a b } {
+    proc assign { op a b } {				# Emit code for assignment
 	variable regs
 	variable text
 	
@@ -399,7 +416,7 @@ namespace eval tna {
     interp alias {} ::tna::udec {} ::tna::uniop
     interp alias {} ::tna::uadd {} ::tna::uniop
 
-    proc uniop { op a } {
+    proc uniop { op a } {				# Emit code for unary operators
 	variable text
 
 	lookup $a regA typeA itemA -
@@ -458,7 +475,7 @@ namespace eval tna {
     interp alias {} ::tna::equ  {} ::tna::binop
     interp alias {} ::tna::neq  {} ::tna::binop
 
-    proc binop { op a b } {
+    proc binop { op a b } {				# Emit code for binary operators
 	variable text
 
 	lookup $a regA typeA itemA dataA
@@ -502,7 +519,7 @@ namespace eval tna {
 	}
     }
 
-    proc Compile { op args } { return [$op $op {*}$args] }
+    proc Emit { op args } { return [$op $op {*}$args] }
 
     proc semi { op } {
 	exprSave
@@ -524,8 +541,14 @@ namespace eval tna {
 	variable regs
 	variable text
 
+	set R {}
+	foreach { reg } [::array names regs] {
+	    lappend R $regs($reg)
+	}
+	set R [lsort -real -index 0 $R]
+
 	if { $any || $text ne {} } {
-	    lappend Code [list [lsort -real -index 0 [map { name values } [::array get regs] { I $values }]] $text]
+	    lappend Code [list $R $text]
 	}
 
 	exprStart
@@ -535,13 +558,13 @@ namespace eval tna {
 	variable Code {}
 
 	exprStart
-	expression::parse $expr [expression::prep-tokens $::expression::optable] $::expression::optable ::tna::Compile
+	expression::parse $expr [expression::prep-tokens $::expression::optable] $::expression::optable ::tna::Emit
 	exprSave $any
 
 	return $Code
     }
     proc expr { expr } {
-	set expr  [regsub -all -line -- {((^[ \t]*)|([ \t]+))#.*$} $expr  { }] 
+	set expr  [regsub -all -line -- {((^[ \t]*)|([ \t]+))#.*$} $expr  { }] 	; # Comment removal
 
 	set code [compile $expr]
 	if { $::tna::debug } {
@@ -606,10 +629,10 @@ namespace eval tna {
 		cntr  { append listing [format " %4d  %-8s %-14s  %8s	%d\n" $n $item $name $type $data] }
 		const { append listing [format " %4d  %-8s %-14s  %8s	%f\n" $n $item $name $type $data] }
 		tna   {
-		    if { $drep eq "ptr" } {
-			append listing [format " %4d  %-8s %-14s  %8s	0x%08x : %s %s\n" $n $item $name $type $data $dims $slice]
-		    } else {
+		    if { $drep eq "bytes" } {
 			append listing [format " %4d  %-8s %-14s  %8s	%10s : %s %s\n" $n $item $name $type bytes $dims $slice]
+		    } else {
+			append listing [format " %4d  %-8s %-14s  %8s	0x%08x : %s %s\n" $n $item $name $type $data $dims $slice]
 		    }
 		}
 	    }
