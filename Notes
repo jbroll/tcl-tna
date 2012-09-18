@@ -2,8 +2,7 @@
 List subsections
 	a list 4:2,5:8
 
-Add inclusive/ exclusive sectioning
-
+tna::index IRAF|Python
 
 Conversion from Tcl list value
     a set {{ 1 2 3 } { 4 5 6 } { 7 8 9 }}
@@ -28,14 +27,15 @@ Reverse slices
 
 Function Calls
 
-Add function opcodes
+TNA extensions
+    Add functions as opcodes
 
 Specific indexing	a[Y+4,X] = b
 
 Tcl variable access.
 	variable is value register
 	insert value before execution
-
+	extract after execution if assigned to
 
 Move parts of execute into compile
     Add dimensions component to compiled code 

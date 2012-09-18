@@ -53,11 +53,13 @@ oo::class create tna::thing {
     method bytes {} { tna::bytes $data [::expr $size*[tna::sizeof_$type]] }
     method print { { fp stdout } } { puts $fp [my list] }
 }
+
 oo::class create tna::array {
-    variable type dims data size drep offs indx indxDefault
-    accessor type dims data size drep offs indx indxDefault
+    variable type dims data size drep offs indx edge indxDefault edgeDefault offsDefault
+    accessor type dims data size drep offs indx
 
     superclass tna::thing
+
 
     constructor { Type args } {
 	classvar indxDefault XYZ
@@ -80,7 +82,7 @@ oo::class create tna::array {
 	set ptr  $options(-ptr)
 
 	if { $edge eq "excl" } { set edge 1
-	} else                 { set edeg 0 }
+	} else                 { set edge 0 }
 
 	if { [llength $offs] == 1 } {
 	    set offs [lrepeat [llength $dims] $options(-offset)]
@@ -160,11 +162,13 @@ oo::class create tna::array {
 			set s [::expr { $s - $o }]
 			set e [::expr { $e - $o - $edge }]
 		    }
+		}
 
 		lappend list [list $s $e $i]
 	    }
 
 	} on error message {
+	    puts $::errorInfo
 	    error "cannot convert $xindx to indx : $message"
 	}
 	return $list
@@ -212,7 +216,7 @@ namespace eval tna {
 	    double  double		double  %f 	double	Tcl_GetDoubleFromObj	d 
     }
 
-    ::array set ItemsX { none 0 temp 1 const 2 tna 3 cntr 4 }
+    ::array set ItemsX { none 0 temp 1 const 2 tna 3 cntr 4 tcl-i 5 tcl-o 6 tcl-io 7 }
 
     set reglist {}
 
@@ -259,7 +263,6 @@ namespace eval tna {
     proc register { name value { type {} } } {		# Allocate a register for a value of some type
 	set dims {}
 	set slic {}
-	set item const
 
 	if { [info command $name] ne {} } {
 	    set data [$name data]
@@ -278,6 +281,7 @@ namespace eval tna {
 		set name $name-$type
 	    }
 	} elseif { [string is double $value] } {
+	    set item const
 	    set data $value
 	    set drep  value
 	    if { $type eq {} } {
@@ -286,12 +290,16 @@ namespace eval tna {
 		set name $name-$type
 	    }
 	} elseif { $name in $::tna::Axes } {
+	    set item const
 	    set type int
 	    set item cntr
 	    set data [::expr -([lsearch $::tna::Axes $name]+1)]
 	    set drep  cntr
 	} else {
-	    error "unknown identifier : $name"
+	    set item tcl-o
+	    set data {}
+	    set drep value
+	    set type double
 	}
 
 	set ::tna::regs($name) 	\
@@ -653,3 +661,5 @@ namespace eval tna {
 	return $listing
     }
 }
+
+
