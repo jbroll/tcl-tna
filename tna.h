@@ -16,6 +16,7 @@ typedef struct _Register {
     int		 item;
     int		 used;
     void	*data;		/* pointer to data 		*/
+    Tcl_Obj	*name;
     union	 {
 	char	_char;
 	uchar	_uchar;

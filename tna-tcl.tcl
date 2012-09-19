@@ -107,6 +107,7 @@ oo::class create tna::array {
 		}
 	    }
 	}
+
     }
 
     method list  {} { 
@@ -174,6 +175,8 @@ oo::class create tna::array {
 	return $list
     }
 }
+oo::objdefine tna::array export varname
+
 oo::class create tna::value {
     variable type dims data size drep offs
     accessor type dims data size drep offs
@@ -220,6 +223,20 @@ namespace eval tna {
 
     set reglist {}
 
+    proc index { mode } {
+	switch $mode {
+	 IRAF {
+	    set [tna::array varname indxDefault] XYZ
+	    set [tna::array varname offsDefault] 1
+	    set [tna::array varname edgeDefault] incl
+	 }
+	 python {
+	    set [tna::array varname indxDefault] ZYX
+	    set [tna::array varname offsDefault] 0
+	    set [tna::array varname edgeDefault] excl
+	 }
+	}
+    }
 
     proc lookup { name regName typName itmName datName { suggestType {} } } {
 	variable regs
@@ -265,14 +282,15 @@ namespace eval tna {
 	set slic {}
 
 	if { [info command $name] ne {} } {
+	    set item tna
 	    set data [$name data]
 	    set type [$name type]
 	    set dims [$name dims]
 	    set drep [$name drep]
 
 	    set slic [$name indx]
-	    set item tna
 	} elseif { [string is int    $value] } {
+	    set item const
 	    set data $value
 	    set drep  value
 	    if { $type eq {} } {
@@ -297,7 +315,7 @@ namespace eval tna {
 	    set drep  cntr
 	} else {
 	    set item tcl-o
-	    set data {}
+	    set data $name
 	    set drep value
 	    set type double
 	}
@@ -575,18 +593,16 @@ namespace eval tna {
 	set expr  [regsub -all -line -- {((^[ \t]*)|([ \t]+))#.*$} $expr  { }] 	; # Comment removal
 
 	set code [compile $expr]
+
 	if { $::tna::debug } {
 	    foreach stmt $code {
 		    puts ""
-		    puts ""
-		puts [join [lindex $stmt 0] \n]
-		    puts ""
-		puts [join [lindex $stmt 1] \n]
 		puts [::tna::disassemble {*}$stmt] 
 	    }
 	}
+
 	foreach stmt $code {
-	    ::tna::execute {*}$stmt
+	    uplevel 1 [list ::tna::execute {*}$stmt]
 	}
     }
     proc debug { x } { set ::tna::debug $x }
@@ -643,6 +659,10 @@ namespace eval tna {
 			append listing [format " %4d  %-8s %-14s  %8s	0x%08x : %s %s\n" $n $item $name $type $data $dims $slice]
 		    }
 		}
+		tcl-i -
+		tcl-o -
+		tcl-io { append listing [format " %4d  %-8s %-14s  %8s	%s\n" $n $item $name $type $data] }
+		default { append listing $r "\n" }
 	    }
 	}
 	append listing	"#\n"

@@ -385,9 +385,12 @@ namespace eval tna {
 #define ValuRegister	2
 #define DataRegister	3
 #define CntrRegister	4
+#define TclIRegister	5
+#define TclORegister	6
+#define TclXRegister	7
 
 
-	    switch ( itemType ) {
+	    switch ( regs[i].item ) {
 	     case TempRegister: slice_reg(&regs[i], dataType);	 break;
 	     case CntrRegister:
 		if ( Tcl_GetLongFromObj( ip, regObjv[6], &data ) == TCL_ERROR ) {
@@ -400,24 +403,43 @@ namespace eval tna {
 
 		break;
 
-	     case ValuRegister:
-		switch ( dataType ) {
-		    [: { type ctype pType   pFmt    getType getFunc scan } $::tna::Types {
+	     case TclIRegister:
+	     case TclORegister:
+	     case TclXRegister:
+	     case ValuRegister: {
+		Tcl_Obj *tclValue;
 
-		     case TNA_TYPE_$type: {
-			$getType this;
+		if ( regs[i].item == ValuRegister ) {
+		    tclValue = regObjv[6];
+		} else {
+		    regs[i].name = regObjv[6];
+		    tclValue = Tcl_ObjGetVar2(ip, regObjv[6], NULL, 0);
+		}
 
-			if ( ${getFunc}(ip, regObjv[6], &this) == TCL_ERROR ) {
-			    free(regs);
-			    return TCL_ERROR;
-			}
-			regs[i].value._$type = this;
-			break;
-		      }
-		    }]
+		switch ( regs[i].item ) {
+		 case TclIRegister:
+		 case TclXRegister:
+		 case ValuRegister:
+		    switch ( dataType ) {
+			[: { type ctype pType   pFmt    getType getFunc scan } $::tna::Types {
+
+			 case TNA_TYPE_$type: {
+			    $getType this;
+
+			    if ( ${getFunc}(ip, tclValue, &this) == TCL_ERROR ) {
+				free(regs);
+				return TCL_ERROR;
+			    }
+			    regs[i].value._$type = this;
+			    break;
+			  }
+			}]
+		    }
+		    break;
 		}
 		slice_val(&regs[i], dataType, (void *)&regs[i].value);
 		break;
+	     }
 
 	     case DataRegister: {
 		    int       dObjc;
@@ -632,6 +654,9 @@ namespace eval tna {
 		     }
 
 		     case TempRegister: { slice_reg(&regs[i], regs[i].type);	 			break; }
+		     case TclIRegister:
+		     case TclORegister:
+		     case TclXRegister:
 		     case ValuRegister: { slice_val(&regs[i], regs[i].type, (void *)&regs[i].value);	break; }
 		     case DataRegister: {
 			for ( j = 0; j < NDIM; j++ ) { regs[i].offs[j] = regs[i].data; }
@@ -661,6 +686,15 @@ namespace eval tna {
 		    if ( !regs[i].used ) { continue; }
 
 		    switch ( regs[i].item ) {
+		     case TclORegister:
+		     case TclXRegister: {
+			if ( !k ) {
+			    printf("Set %d %s %f\n", i, Tcl_GetStringFromObj(regs[i].name, NULL), regs[i].value._double);
+
+			    Tcl_ObjSetVar2(ip, regs[i].name, NULL, Tcl_NewDoubleObj(regs[i].value._double), 0);
+			}
+			break;
+		     }
 		     case TempRegister: { free(regs[i].data);	 			break; }
 		    }
 		}
