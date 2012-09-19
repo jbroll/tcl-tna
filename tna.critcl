@@ -689,8 +689,6 @@ namespace eval tna {
 		     case TclORegister:
 		     case TclXRegister: {
 			if ( !k ) {
-			    printf("Set %d %s %f\n", i, Tcl_GetStringFromObj(regs[i].name, NULL), regs[i].value._double);
-
 			    Tcl_ObjSetVar2(ip, regs[i].name, NULL, Tcl_NewDoubleObj(regs[i].value._double), 0);
 			}
 			break;

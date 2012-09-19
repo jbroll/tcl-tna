@@ -390,6 +390,24 @@ namespace eval tna {
     }
 
     proc deref { args } { return * }
+    proc dolar { op name } {				# Create a tcl-i(nput) register
+	if { [info exists ::tna::regs($name)] } {
+	    switch [lindex $::tna::regs($name) 2] {
+	     tcl-i - tcl-io {}
+	     tcl-o { lset ::tna::regs($name)] 2 tcl-io }
+	     default {
+		 error "existing value is not a tcl reference : $name"
+	     }
+	    }
+
+	    return $name
+	}
+	     
+	set ::tna::regs($name) 	\
+	    [list [incr ::tna::nreg] double tcl-i $name : {} $name $::tna::ItemsX(tcl-i) $::tna::TypesX(double) {} {}]
+
+	return $name
+    }
 
     proc assign { op a b } {				# Emit code for assignment
 	variable regs
