@@ -284,9 +284,9 @@ namespace eval tna {
 	if { [info command $name] ne {} } {
 	    set item tna
 	    set data [$name data]
+	    set drep [$name drep]
 	    set type [$name type]
 	    set dims [$name dims]
-	    set drep [$name drep]
 
 	    set slic [$name indx]
 	} elseif { [string is int    $value] } {
@@ -320,8 +320,12 @@ namespace eval tna {
 	    set type double
 	}
 
+	try { set typex $::tna::TypesX($type) 
+	} on error message { set typex 0 }
+
+	
 	set ::tna::regs($name) 	\
-	    [list [incr ::tna::nreg] $type $item $name : $drep $data $::tna::ItemsX($item) $::tna::TypesX($type) $dims $slic]
+	    [list [incr ::tna::nreg] $type $item $name : $drep $data $::tna::ItemsX($item) $typex $dims $slic]
     }
     proc register-type { name } { return [lindex ::tna::regs($name) 1] }
 
