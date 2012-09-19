@@ -413,8 +413,8 @@ namespace eval tna {
 	variable regs
 	variable text
 	
-	lookup $a regA typeA - -
-	lookup $b regB typeB - -
+	lookup $a regA typeA itemA -
+	lookup $b regB typeB -     -
 
 	if { $typeA == "any" } { set typeA $typeB }
 	if { $typeB == "any" } { set typeB $typeA }
@@ -424,6 +424,10 @@ namespace eval tna {
 	    lappend text [list $::tna::OpcodesX(tna_opcode_xxx_$typeB) $regB 0 $tmp]
 	    set ::tna::X [set regB $tmp]
 	    set regB $tmp
+	}
+	if { $itemA eq "tcl-i" } {					# Fix up tcl-i(nput) to be tcl-io
+	    lset ::tna::regs($a) 2 tcl-io
+	    lset ::tna::regs($a) 7 $::tna::ItemsX(tcl-io)
 	}
 
 	# If the types are the same and the target is a tmp register,
