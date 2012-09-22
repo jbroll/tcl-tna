@@ -2,7 +2,20 @@
 List subsections
 	a list 4:2,5:8
 
-tna::index IRAF|Python
+TEST tna::index IRAF|Python
+TEST tcl variable access
+
+Replace item names with string that begin with uniq chars
+	remove ItemsX and ItemsX position in register list.
+
+Replace register list with ARec table
+	Add nrec/arec allocation
+	Add expansion of record array length
+
+Allow threaded reduction
+	if reduction operator used with accumulator whose dimension
+	is smaller than dims.  Duplicate accumulator in each thread
+	Accumulate after thread are complete.
 
 Conversion from Tcl list value
     a set {{ 1 2 3 } { 4 5 6 } { 7 8 9 }}
@@ -32,17 +45,14 @@ TNA extensions
 
 Specific indexing	a[Y+4,X] = b
 
-Tcl variable access.
-	variable is value register
-	insert value before execution
-	extract after execution if assigned to
-
 Move parts of execute into compile
     Add dimensions component to compiled code 
     returning a triple (dims, regs, text).
 
     Add compiler epochs to track definitions of arrays
     and values and cache string to code conversion
+
+Move threaded register allocation into threads.
 
 
 

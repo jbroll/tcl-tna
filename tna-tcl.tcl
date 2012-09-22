@@ -219,7 +219,7 @@ namespace eval tna {
 	    double  double		double  %f 	double	Tcl_GetDoubleFromObj	d 
     }
 
-    ::array set ItemsX { none 0 temp 1 const 2 tna 3 cntr 4 tcl-i 5 tcl-o 6 tcl-io 7 }
+    ::array set ItemsX { none 0 anon 1 const 2 tna 3 axis 4 ivar 5 ovar 6 xvar 7 }
 
     set reglist {}
 
@@ -238,7 +238,7 @@ namespace eval tna {
 	}
     }
 
-    proc lookup { name regName typName itmName datName { suggestType {} } } {
+    proc lookup { name regName typName itmName datName { suggestType {} } { suggestItem {} } } {
 	variable regs
 
 	upvar $regName reg
@@ -247,7 +247,7 @@ namespace eval tna {
 	upvar $datName dat
 
 	if { ![info exists regs($name)] && ![info exists regs($name-$suggestType)] } {
-	    register $name $name $suggestType
+	    register $name $name $suggestType $suggestItem
 	}
 
 	if { [info exists regs($name)] } {
@@ -257,7 +257,7 @@ namespace eval tna {
 	}
     }
 
-    proc tempreg { type { regtype temp } } {		# Allocate a temp register
+    proc anonreg { type { regtype anon } } {		# Allocate a anon register
 	if { [llength $::tna::reglist] == 0 } {
 	    set reg   [incr ::tna::nreg]
 	    set name @$reg
@@ -267,17 +267,17 @@ namespace eval tna {
 	    set reg [string range $name 1 end]
 	}
 
-	set ::tna::regs($name) [list $reg $type $regtype $name : temp $regtype $::tna::ItemsX(temp) $::tna::TypesX($type) {} {}]
+	set ::tna::regs($name) [list $reg $type $regtype $name : anon $regtype $::tna::ItemsX(anon) $::tna::TypesX($type) {} {}]
 
 	return $reg
     }
-    proc dispose { name } {				# Push temp register on list for reuse
+    proc dispose { name } {				# Push anon register on list for reuse
 	if { [string index $name 0] eq "@"	\
-	  && [lindex $::tna::regs($name) 2] eq "temp" } {
+	  && [lindex $::tna::regs($name) 2] eq "anon" } {
 	    lappend ::tna::reglist $name
 	}
     }
-    proc register { name value { type {} } } {		# Allocate a register for a value of some type
+    proc register { name value { type {} } { item {} } } {		# Allocate a register for a value of some type
 	set dims {}
 	set slic {}
 
@@ -310,14 +310,18 @@ namespace eval tna {
 	} elseif { $name in $::tna::Axes } {
 	    set item const
 	    set type int
-	    set item cntr
+	    set item axis
 	    set data [::expr -([lsearch $::tna::Axes $name]+1)]
-	    set drep  cntr
+	    set drep  axis
 	} else {
-	    set item tcl-o
-	    set data $name
-	    set drep value
-	    set type double
+	    if { $item ne {} } {
+		set item $item
+		set data $name
+		set drep value
+		set type double
+	    } else {
+		error "cannot identify item : $name"
+	    }
 	}
 
 	try { set typex $::tna::TypesX($type) 
@@ -346,7 +350,7 @@ namespace eval tna {
 	    upvar $Name N
 
 	    if { $type ne $typeC } {
-		set N [tempreg $typeC]
+		set N [anonreg $typeC]
 		lappend text [list $::tna::OpcodesX(tna_opcode_${type}_${typeC}) $reg 0 $N]
 		dispose $reg
 	    } else {
@@ -354,7 +358,7 @@ namespace eval tna {
 	    }
 	}
 
-	set regC [tempreg $typeC]
+	set regC [anonreg $typeC]
 	set C @$regC
     }
 
@@ -369,7 +373,7 @@ namespace eval tna {
 
 	lookup $name - - - -
 
-	set reg [tempreg int]
+	set reg [anonreg int]
 
 	foreach i { 1 2 5 6 7 8 9 10 } {
 	    lset regs(@$reg) $i [lindex $regs($name) $i]
@@ -394,11 +398,11 @@ namespace eval tna {
     }
 
     proc deref { args } { return * }
-    proc dolar { op name } {				# Create a tcl-i(nput) register
+    proc dolar { op name } {				# Create a ivar (input) register
 	if { [info exists ::tna::regs($name)] } {
 	    switch [lindex $::tna::regs($name) 2] {
-	     tcl-i - tcl-io {}
-	     tcl-o { lset ::tna::regs($name)] 2 tcl-io }
+	     ivar - xvar {}
+	     ovar { lset ::tna::regs($name)] 2 xvar }
 	     default {
 		 error "existing value is not a tcl reference : $name"
 	     }
@@ -408,7 +412,7 @@ namespace eval tna {
 	}
 	     
 	set ::tna::regs($name) 	\
-	    [list [incr ::tna::nreg] double tcl-i $name : {} $name $::tna::ItemsX(tcl-i) $::tna::TypesX(double) {} {}]
+	    [list [incr ::tna::nreg] double ivar $name : value $name $::tna::ItemsX(ivar) $::tna::TypesX(double) {} {}]
 
 	return $name
     }
@@ -417,21 +421,21 @@ namespace eval tna {
 	variable regs
 	variable text
 	
-	lookup $a regA typeA itemA -
+	lookup $a regA typeA itemA - {} ovar
 	lookup $b regB typeB -     -
 
 	if { $typeA == "any" } { set typeA $typeB }
 	if { $typeB == "any" } { set typeB $typeA }
 
 	if { $b eq "X" } {						# Add X register fixup
-	    set tmp [tempreg $typeB cx]
+	    set tmp [anonreg $typeB anox]
 	    lappend text [list $::tna::OpcodesX(tna_opcode_xxx_$typeB) $regB 0 $tmp]
 	    set ::tna::X [set regB $tmp]
 	    set regB $tmp
 	}
-	if { $itemA eq "tcl-i" } {					# Fix up tcl-i(nput) to be tcl-io
-	    lset ::tna::regs($a) 2 tcl-io
-	    lset ::tna::regs($a) 7 $::tna::ItemsX(tcl-io)
+	if { $itemA eq "ivar" } {					# Fix up ivar (input) to be xvar
+	    lset ::tna::regs($a) 2 xvar
+	    lset ::tna::regs($a) 7 $::tna::ItemsX(xvar)
 	}
 
 	# If the types are the same and the target is a tmp register,
@@ -459,6 +463,8 @@ namespace eval tna {
     interp alias {} ::tna::shlasn {} ::tna::asnop
 
     proc asnop { op a b } {
+	lookup $a - - - - {} xvar
+
 	assign $op $a [binop [string range $op  0 2] $a $b]
     }
 
@@ -478,7 +484,7 @@ namespace eval tna {
 	 inc - uinc { set incr  1 }
 	}
 
-	set tmp [tempreg $typeA]
+	set tmp [anonreg $typeA]
 
 	switch -- $op {
 	 inc - dec {
@@ -538,7 +544,7 @@ namespace eval tna {
 
 	if { $a eq "X" } {					  # X register fixup
 	    if { $::tna::X eq {} } {
-		set tmp [tempreg $typeA cx]
+		set tmp [anonreg $typeA anox]
 		lappend text [list $::tna::OpcodesX(tna_opcode_xxx_$typeA) $regA 0 $tmp]
 		set ::tna::X [set regA $tmp]
 	    } else {
@@ -547,7 +553,7 @@ namespace eval tna {
 	}
 	if { $b eq "X" } {					  # X register fixup
 	    if { $::tna::X eq {} } {
-		set tmp [tempreg $typeB cx]
+		set tmp [anonreg $typeB anox]
 		lappend text [list $::tna::OpcodesX(tna_opcode_xxx_$typeB) $regB 0 $tmp]
 		set ::tna::X [set regB $tmp]
 	    } else {
@@ -622,7 +628,15 @@ namespace eval tna {
 
 	if { $::tna::debug } {
 	    foreach stmt $code {
+		puts ""
+		if { $::tna::debug == 2 } {
+		    lassign $stmt regs text 
+
+		    puts [join $regs \n]
 		    puts ""
+		    puts [join $text \n]
+		    puts ""
+		}
 		puts [::tna::disassemble {*}$stmt] 
 	    }
 	}
@@ -674,9 +688,9 @@ namespace eval tna {
 
 	    switch $item {
 		none -
-		cx    -
-		temp  { append listing [format " %4d  %-8s %-14s  %8s\n" $n $item $name $type] }
-		cntr  { append listing [format " %4d  %-8s %-14s  %8s	%d\n" $n $item $name $type $data] }
+		dx    -
+		anon  { append listing [format " %4d  %-8s %-14s  %8s\n" $n $item $name $type] }
+		axis  { append listing [format " %4d  %-8s %-14s  %8s	%d\n" $n $item $name $type $data] }
 		const { append listing [format " %4d  %-8s %-14s  %8s	%f\n" $n $item $name $type $data] }
 		tna   {
 		    if { $drep eq "bytes" } {
@@ -685,9 +699,9 @@ namespace eval tna {
 			append listing [format " %4d  %-8s %-14s  %8s	0x%08x : %s %s\n" $n $item $name $type $data $dims $slice]
 		    }
 		}
-		tcl-i -
-		tcl-o -
-		tcl-io { append listing [format " %4d  %-8s %-14s  %8s	%s\n" $n $item $name $type $data] }
+		ivar -
+		ovar -
+		xvar { append listing [format " %4d  %-8s %-14s  %8s	%s\n" $n $item $name $type $data] }
 		default { append listing $r "\n" }
 	    }
 	}

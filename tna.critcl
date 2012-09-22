@@ -413,7 +413,13 @@ namespace eval tna {
 		    tclValue = regObjv[6];
 		} else {
 		    regs[i].name = regObjv[6];
-		    tclValue = Tcl_ObjGetVar2(ip, regObjv[6], NULL, 0);
+		    if ( !(tclValue = Tcl_ObjGetVar2(ip, regObjv[6], NULL, 0)) ) {
+			Tcl_Obj *error = Tcl_NewStringObj("can't read \"", -1);
+			Tcl_AppendObjToObj(error, regObjv[6]);
+			Tcl_AppendObjToObj(error, Tcl_NewStringObj("\": no such variable", -1));
+			Tcl_SetObjResult(ip, error);
+			return TCL_ERROR;
+		    }
 		}
 
 		switch ( regs[i].item ) {
@@ -471,9 +477,6 @@ namespace eval tna {
 		}
 
 		if ( sObjc != dObjc ) {
-		    printf("register %d : dims %d slice %d\n", i, dObjc, sObjc);
-		    fflush(stdout);
-
 		    Tcl_AddErrorInfo(ip, "dims and slice dimensions must match");
 		    free(regs);
 		    return TCL_ERROR;
@@ -558,7 +561,7 @@ namespace eval tna {
 	    }
 	}
 
-	// Convert the textList into an array of shorts.
+	// Convert the text program into an array of Instruct.
 	//
 	if ( Tcl_ListObjGetElements(ip, textList, &ntext, &textObjv) == TCL_ERROR ) {
 	    free(regs);
@@ -617,6 +620,10 @@ namespace eval tna {
 		    }
 		}
 		if ( dims[0][j] != 0 ) { ndim = j+1; }
+	    }
+	    if ( ndim == 0 ) {
+		ndim = 1;
+		dims[0][0] = 1;
 	    }
 
 	    m[0].program   = (Instruct *) text;
