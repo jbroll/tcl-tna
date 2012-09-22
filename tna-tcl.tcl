@@ -219,8 +219,6 @@ namespace eval tna {
 	    double  double		double  %f 	double	Tcl_GetDoubleFromObj	d 
     }
 
-    ::array set ItemsX { none 0 anon 1 const 2 tna 3 axis 4 ivar 5 ovar 6 xvar 7 }
-
     set reglist {}
 
     proc index { mode } {
@@ -267,7 +265,7 @@ namespace eval tna {
 	    set reg [string range $name 1 end]
 	}
 
-	set ::tna::regs($name) [list $reg $type $regtype $name : anon $regtype $::tna::ItemsX(anon) $::tna::TypesX($type) {} {}]
+	set ::tna::regs($name) [list $reg $type $regtype $name : anon $regtype {} $::tna::TypesX($type) {} {}]
 
 	return $reg
     }
@@ -310,9 +308,9 @@ namespace eval tna {
 	} elseif { $name in $::tna::Axes } {
 	    set item const
 	    set type int
-	    set item axis
+	    set item vect
 	    set data [::expr -([lsearch $::tna::Axes $name]+1)]
-	    set drep  axis
+	    set drep  vect
 	} else {
 	    if { $item ne {} } {
 		set item $item
@@ -329,7 +327,7 @@ namespace eval tna {
 
 	
 	set ::tna::regs($name) 	\
-	    [list [incr ::tna::nreg] $type $item $name : $drep $data $::tna::ItemsX($item) $typex $dims $slic]
+	    [list [incr ::tna::nreg] $type $item $name : $drep $data {} $typex $dims $slic]
     }
     proc register-type { name } { return [lindex ::tna::regs($name) 1] }
 
@@ -412,7 +410,7 @@ namespace eval tna {
 	}
 	     
 	set ::tna::regs($name) 	\
-	    [list [incr ::tna::nreg] double ivar $name : value $name $::tna::ItemsX(ivar) $::tna::TypesX(double) {} {}]
+	    [list [incr ::tna::nreg] double ivar $name : value $name {} $::tna::TypesX(double) {} {}]
 
 	return $name
     }
@@ -435,7 +433,6 @@ namespace eval tna {
 	}
 	if { $itemA eq "ivar" } {					# Fix up ivar (input) to be xvar
 	    lset ::tna::regs($a) 2 xvar
-	    lset ::tna::regs($a) 7 $::tna::ItemsX(xvar)
 	}
 
 	# If the types are the same and the target is a tmp register,
@@ -592,9 +589,9 @@ namespace eval tna {
 	variable reglist {}
 
 	::array unset regs
-	set regs(0) [list 0 any @0 0 : 0 0 $::tna::ItemsX(const) $::tna::TypesX(int) {} {}]
+	set regs(0) [list 0 any const 0 : 0 0 {} $::tna::TypesX(int) {} {}]
     }
-    proc exprSave { { any 0 } } {
+    proc exprSave {} {
 	variable Code
 	variable regs
 	variable text
@@ -605,19 +602,19 @@ namespace eval tna {
 	}
 	set R [lsort -real -index 0 $R]
 
-	if { $any || $text ne {} } {
+	if { $text ne {} } {
 	    lappend Code [list $R $text]
 	}
 
 	exprStart
     }
 
-    proc compile { expr { any 0 } } {
+    proc compile { expr } {
 	variable Code {}
 
 	exprStart
 	expression::parse $expr [expression::prep-tokens $::expression::optable] $::expression::optable ::tna::Emit
-	exprSave $any
+	exprSave
 
 	return $Code
     }
@@ -688,9 +685,9 @@ namespace eval tna {
 
 	    switch $item {
 		none -
-		dx    -
+		anox  -
 		anon  { append listing [format " %4d  %-8s %-14s  %8s\n" $n $item $name $type] }
-		axis  { append listing [format " %4d  %-8s %-14s  %8s	%d\n" $n $item $name $type $data] }
+		vect  { append listing [format " %4d  %-8s %-14s  %8s	%d\n" $n $item $name $type $data] }
 		const { append listing [format " %4d  %-8s %-14s  %8s	%f\n" $n $item $name $type $data] }
 		tna   {
 		    if { $drep eq "bytes" } {

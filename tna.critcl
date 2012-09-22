@@ -345,7 +345,7 @@ namespace eval tna {
 	int	 thisInt;
 	long	 thisLong;
 
-	int	itemType;
+	char    *itemType;
 	int	dataType;
 
 	double dataValu;
@@ -369,31 +369,19 @@ namespace eval tna {
 
 	    // reg typ item name : drep data obj dat dim slice
 	    //
-	    if ( Tcl_GetIntFromObj( ip, regObjv[7], &itemType ) == TCL_ERROR ) {
-		free(regs);
-		return TCL_ERROR;
-	    }
-	    regs[i].item = itemType;
+	    itemType = Tcl_GetStringFromObj(regObjv[2], NULL);
+	    regs[i].item = itemType[0];
 
 	    if ( Tcl_GetIntFromObj( ip, regObjv[8], &dataType ) == TCL_ERROR ) {
 		free(regs);
 		return TCL_ERROR;
 	    }
 
-#define NoneRegister	0
-#define TempRegister	1
-#define ValuRegister	2
-#define DataRegister	3
-#define CntrRegister	4
-#define TclIRegister	5
-#define TclORegister	6
-#define TclXRegister	7
-
-
 	    switch ( regs[i].item ) {
-	     case TempRegister: slice_reg(&regs[i], dataType);	 break;
-	     case CntrRegister:
-		if ( Tcl_GetLongFromObj( ip, regObjv[6], &data ) == TCL_ERROR ) {
+
+	     case 'a': slice_reg(&regs[i], dataType);	 break;				// anon
+	     case 'v':									// vect
+		if ( Tcl_GetLongFromObj( ip, regObjv[6], &data ) == TCL_ERROR ) {	
 		    free(regs);
 		    return TCL_ERROR;
 		}
@@ -403,13 +391,13 @@ namespace eval tna {
 
 		break;
 
-	     case TclIRegister:
-	     case TclORegister:
-	     case TclXRegister:
-	     case ValuRegister: {
+	     case 'i':									// ivar
+	     case 'o':									// ovar
+	     case 'x':									// xvar
+	     case 'c': {								// const
 		Tcl_Obj *tclValue;
 
-		if ( regs[i].item == ValuRegister ) {
+		if ( regs[i].item == 'c' ) {					
 		    tclValue = regObjv[6];
 		} else {
 		    regs[i].name = regObjv[6];
@@ -423,9 +411,9 @@ namespace eval tna {
 		}
 
 		switch ( regs[i].item ) {
-		 case TclIRegister:
-		 case TclXRegister:
-		 case ValuRegister:
+		 case 'i':
+		 case 'x':
+		 case 'c':
 		    switch ( dataType ) {
 			[: { type ctype pType   pFmt    getType getFunc scan } $::tna::Types {
 
@@ -447,7 +435,7 @@ namespace eval tna {
 		break;
 	     }
 
-	     case DataRegister: {
+	     case 't': {
 		    int       dObjc;
 		    Tcl_Obj **dObjv;
 
@@ -554,7 +542,12 @@ namespace eval tna {
 		break;
 	     }
 	     default : {
-		Tcl_AddErrorInfo(ip, "unknown item type register");
+		Tcl_Obj *error = Tcl_NewStringObj("unknown item type register:", -1);
+		Tcl_AppendObjToObj(error, regObjv[0]);
+		Tcl_AppendObjToObj(error, regObjv[1]);
+		Tcl_AppendObjToObj(error, regObjv[2]);
+		Tcl_AppendObjToObj(error, regObjv[3]);
+		Tcl_SetObjResult(ip, error);
 		free(regs);
 		return TCL_ERROR;
 	     }
@@ -615,7 +608,7 @@ namespace eval tna {
 		zero[0][j] = 0;
 		dims[0][j] = 0;
 		for ( i = 0; i < nregs; i++ ) {
-		    if ( regs[i].used && regs[i].item == DataRegister && dims[0][j] < regs[i].axis[j].size ) {
+		    if ( regs[i].used && regs[i].item == 't' && dims[0][j] < regs[i].axis[j].size ) {
 			dims[0][j] = regs[i].axis[j].size;
 		    }
 		}
@@ -648,7 +641,7 @@ namespace eval tna {
 		    if ( !regs[i].used ) { continue; }
 
 		    switch ( regs[i].item ) {
-		     case CntrRegister: {
+		     case 'v': {
 			int size = regs[i].axis[0].size;
 
 			slice_val(&regs[i], regs[i].type, (void *)&regs[i].value);
@@ -660,12 +653,12 @@ namespace eval tna {
 			break;
 		     }
 
-		     case TempRegister: { slice_reg(&regs[i], regs[i].type);	 			break; }
-		     case TclIRegister:
-		     case TclORegister:
-		     case TclXRegister:
-		     case ValuRegister: { slice_val(&regs[i], regs[i].type, (void *)&regs[i].value);	break; }
-		     case DataRegister: {
+		     case 'a': { slice_reg(&regs[i], regs[i].type);	 			break; }
+		     case 'i':
+		     case 'o':
+		     case 'x':
+		     case 'c': { slice_val(&regs[i], regs[i].type, (void *)&regs[i].value);	break; }
+		     case 't': {
 			for ( j = 0; j < NDIM; j++ ) { regs[i].offs[j] = regs[i].data; }
 			break;
 		     }
@@ -693,14 +686,14 @@ namespace eval tna {
 		    if ( !regs[i].used ) { continue; }
 
 		    switch ( regs[i].item ) {
-		     case TclORegister:
-		     case TclXRegister: {
+		     case 'o':
+		     case 'x': {
 			if ( !k ) {
 			    Tcl_ObjSetVar2(ip, regs[i].name, NULL, Tcl_NewDoubleObj(regs[i].value._double), 0);
 			}
 			break;
 		     }
-		     case TempRegister: { free(regs[i].data);	 			break; }
+		     case 'a': { free(regs[i].data);	 			break; }
 		    }
 		}
 
