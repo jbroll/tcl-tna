@@ -5,9 +5,6 @@ List subsections
 TEST tna::index IRAF|Python
 TEST tcl variable access
 
-Replace item names with string that begin with uniq chars
-	remove ItemsX and ItemsX position in register list.
-
 Replace register list with ARec table
 	Add nrec/arec allocation
 	Add expansion of record array length
