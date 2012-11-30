@@ -153,6 +153,7 @@
 	set prv {}					; # The previous token.
 
 	set input [string map $tokenmap $input]		; # Lexing done by mapping spaces around the operators!
+	set input [regsub -all {([a-zA-Z_][a-zA-Z0-9_])*\.([a-zA-Z_][a-zA-Z0-9_])} $input {\1 . \2}]
 
 	#puts $input
 

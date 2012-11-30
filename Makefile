@@ -1,5 +1,10 @@
 
-all: tna nproc
+all: arec tna nproc
+
+arec:	arec.c arec.tcl
+	critcl31 -target macosx-x86_32 -force -pkg arec
+	rm -r lib/arec/macosx-ix86
+	mv lib/arec/macosx-x86_32 lib/arec/macosx-ix86
 
 tna:	tna.h tna.critcl tna-tcl.tcl expression.tcl functional.tcl tcloo.tcl
 	unsource tna.critcl > tna.tcl

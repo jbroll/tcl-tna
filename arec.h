@@ -1,4 +1,7 @@
 
+
+#define ARecPadd(offset, align) ((offset + align - 1) & ~(align - 1))
+
 #define ARecOff(p_type,field) \
             ((int) (((char *) (&(((p_type)NULL)->field))) - ((char *) NULL)))
 
@@ -15,47 +18,44 @@
 	}								\
     }
 
-#define ARecGetIntFromObj(interp, obj, name)				\
+#define ARecGetIntFromObj(interp, obj, name)					\
 	if ( Tcl_GetIntFromObj(interp, obj, &name) != TCL_OK ) {		\
-	    Tcl_SetStringObj(result, "cannot convert " #name " to int", -1);			\
+	    Tcl_SetStringObj(result, "cannot convert " #name " to int", -1);	\
 	    return TCL_ERROR;							\
 	}
 
-#define ARecGetDoubleFromObj(interp, obj, name)				\
+#define ARecGetDoubleFromObj(interp, obj, name)					\
 	if ( Tcl_GetDoubleFromObj(interp, obj, &name) != TCL_OK ) {		\
-	    Tcl_SetStringObj(result, "cannot convert " #name " to double", -1);			\
+	    Tcl_SetStringObj(result, "cannot convert " #name " to double", -1);	\
 	    return TCL_ERROR;							\
 	}
 
 #define ARecGetARecInstFromObj(interp, obj, type, name, count)				\
-	if ( Tcl_GetARecInstFromObj(interp, obj, type, &name, &count) != TCL_OK ) {		\
-	    Tcl_SetStringObj(result, "cannot convert " #name " to arec instance", -1);			\
-	    return TCL_ERROR;							\
+	if ( Tcl_GetARecInstFromObj(interp, obj, type, &name, &count) != TCL_OK ) {	\
+	    Tcl_SetStringObj(result, "cannot convert " #name " to arec instance", -1);	\
+	    return TCL_ERROR;								\
 	}
 
 
 typedef struct _ARecDType {
     char	*name;
+    int		 size;
     int		(*set)(Tcl_Obj *, void *);
     Tcl_Obj*	(*get)(void *);
 } ARecDType;
 
 typedef struct _ARecTypeTable {
-    char		*name;
     Tcl_Obj		*nameobj;
-    int		 	 maxlen;
     int	 	 	 offset;
-    ARecDType	*dtype;
+    ARecDType		*dtype;
 } ARecTypeTable;
 
 typedef struct _ARecTypeDef {
-    char	     *name;
     Tcl_Obj	     *nameobj;
     int		      size;
     int		     nfield;
-    ARecTypeTable *field;
-    int		     (*objcmd)();
-    struct _ARecTypeDef *next;
+    int		     afield;
+    ARecTypeTable   *field;
     struct _ARecInst    *instances;
 } ARecTypeDef;
 
@@ -65,6 +65,7 @@ typedef struct _ARecInst {
     struct _ARecInst	*next;
     void		*recs;
     int			nrecs;
+    int			arecs;
 } ARecInst;
 
 Tcl_Obj *ARecGetDouble(void *here);

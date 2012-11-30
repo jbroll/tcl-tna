@@ -5,6 +5,10 @@ List subsections
 TEST tna::index IRAF|Python
 TEST tcl variable access
 
+Incorperate arec support
+	arec class support for tna methods
+	support . operator
+
 Replace register list with ARec table
 	Add nrec/arec allocation
 	Add expansion of record array length
