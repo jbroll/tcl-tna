@@ -2,7 +2,6 @@
 package provide tna 0.5
 
 critcl::tsources tna.tcl	 			; # This file is a tcl source file for the package.
-#critcl::tsources tcloo.tcl template.tcl functional.tcl	; # Helpers
 critcl::cheaders tna.h tpool/tpool.h
 critcl::csources tpool/tpool.c
 

@@ -22,9 +22,20 @@ namespace eval arec {
     proc int    { args } { $::arec::type add-field int    {*}$args }
     proc float  { args } { $::arec::type add-field float  {*}$args }
     proc double { args } { $::arec::type add-field double {*}$args }
-    proc char*  { args } { $::arec::type add-field string {*}$args }
+    proc string { args } { $::arec::type add-field string {*}$args }
 
+    critcl::ccode {
+	#include "arec.h"
+
+	extern ARecInst ARecDTypesInst;
+	extern ARecType ARecDTypesType;
+	extern int ARecInstObjCmd();
+	extern int ARecDelInst();
+    }
     critcl::ccommand NewType { data interp objc objv } { return ARecNewType(interp, objc, objv); }
+    critcl::cinit {
+	ARecInit(ip);
+    } { }
 }
 
 package provide arec 1.0

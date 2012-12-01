@@ -18,6 +18,13 @@
 	}								\
     }
 
+#define ARecUnknownMethod(interp, inst, objc, objv)			\
+    Tcl_AppendResult(interp						\
+	    , Tcl_GetString(inst->nameobj)				\
+	    , objc == 1 ? " no method?" : " unknown method: "		\
+	    , objc == 1 ? NULL         : Tcl_GetString(objv[1]), NULL);
+
+
 #define ARecGetIntFromObj(interp, obj, name)					\
 	if ( Tcl_GetIntFromObj(interp, obj, &name) != TCL_OK ) {		\
 	    Tcl_SetStringObj(result, "cannot convert " #name " to int", -1);	\
@@ -40,6 +47,7 @@
 typedef struct _ARecDType {
     char	*name;
     int		 size;
+    int		 align;
     int		(*set)(Tcl_Obj *, void *);
     Tcl_Obj*	(*get)(void *);
 } ARecDType;
@@ -50,18 +58,18 @@ typedef struct _ARecTypeTable {
     ARecDType		*dtype;
 } ARecTypeTable;
 
-typedef struct _ARecTypeDef {
+typedef struct _ARecType {
     Tcl_Obj	     *nameobj;
     int		      size;
     int		     nfield;
     int		     afield;
     ARecTypeTable   *field;
     struct _ARecInst    *instances;
-} ARecTypeDef;
+} ARecType;
 
 typedef struct _ARecInst {
-    Tcl_Obj		*nameobj;
-    ARecTypeDef	*type;
+    Tcl_Obj	*nameobj;
+    ARecType	*type;
     struct _ARecInst	*next;
     void		*recs;
     int			nrecs;
@@ -76,33 +84,26 @@ int ARecSetDouble(Tcl_Obj *obj, void *here);
 int ARecSetFloat( Tcl_Obj *obj, void *here);
 int ARecSetInt(   Tcl_Obj *obj, void *here);
 
-int ARecNewInst(Tcl_Interp *interp, int objc, Tcl_Obj **objv, ARecTypeDef *type);
+int ARecNewInst(Tcl_Interp *interp, int objc, Tcl_Obj **objv, ARecType *type);
 int ARecSetFromArgs(Tcl_Interp *interp
-		     , ARecTypeDef *type
+		     , ARecType *type
 		     , char *recs
 		     , int n
 		     , int objc
 		     , Tcl_Obj **objv);
 int ARecSetFromList(Tcl_Interp *interp
-		     , ARecTypeDef *type
+		     , ARecType *type
 		     , char *recs
 		     , int n
 		     , int objc
 		     , Tcl_Obj **objv);
 int ARecSetFromDict(Tcl_Interp *interp
-		     , ARecTypeDef *type
+		     , ARecType *type
 		     , char *recs
 		     , int n
 		     , int objc
 		     , Tcl_Obj **objv);
 
-extern ARecDType ARecCharDType;
-extern ARecDType ARecUCharDType;
-extern ARecDType ARecShortDType;
-extern ARecDType ARecUShortDType;
-extern ARecDType ARecIntDType;
-extern ARecDType ARecFloatDType;
-extern ARecDType ARecDoubleDType;
-extern ARecDType ARecStringDType;
+ARecDType *ARecLookupDType(Tcl_Obj *nameobj);
 
 typedef char *string;

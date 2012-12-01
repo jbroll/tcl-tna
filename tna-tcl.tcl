@@ -55,11 +55,10 @@ oo::class create tna::thing {
 }
 
 oo::class create tna::array {
-    variable type dims data size drep offs indx edge indxDefault edgeDefault offsDefault
-    accessor type dims data size drep offs indx
-
     superclass tna::thing
 
+    variable type dims data size drep offs indx edge indxDefault edgeDefault offsDefault
+    accessor type dims data size drep offs indx
 
     constructor { Type args } {
 	classvar indxDefault XYZ

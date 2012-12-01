@@ -3,7 +3,6 @@
 
 package require tcltest
 
-package require tcltest
 lappend auto_path lib
 
 package require tna
