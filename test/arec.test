@@ -2,9 +2,10 @@
 #
 lappend auto_path /Users/john/lib lib
 
-package require critcl
 package require tcltest
 package require arec
+
+
 
 ::tcltest::configure -testdir [file dirname [file normalize [info script]]] -singleproc 1
 
@@ -53,4 +54,28 @@ foreach i { 0 1 2 3 4 5 6 7 8 9 0 } {
     } -cleanup { rename blonk {}
     } -result {{6 4 3.3} {4 4 3.3} {4 4 3.3} {4 4 5.5}}
 }
+
+
+::tcltest::test length { length+1 } -body {
+    arec::typedef blink {
+	double a
+	int    b
+	double c
+    }
+
+    blink new blonk 5
+
+    blonk 0 end set a 3.3
+    blonk 0 end set b 3
+    blonk 0 end set c 5.5
+
+
+    blonk end+1 set a 6
+    blonk end+1 set a 7
+    blonk end+1 set a 8
+    blonk end+1 set a 9
+
+    blonk 0 end get
+} -cleanup {
+} -result  "[lrepeat 5 {3.3 3 5.5}] {6.0 0 0.0} {7.0 0 0.0} {8.0 0 0.0} {9.0 0 0.0}"
 

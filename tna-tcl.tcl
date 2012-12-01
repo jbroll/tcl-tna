@@ -21,9 +21,9 @@ oo::class create tna::thing {
 		 uint   { set row [map value $row { expr { $value &  0xFFFFFFFF } }] }
 		 ulong  {
 		    if { [::tna::sizeof_long] == 4 } {
-			set row [map value $row { expr { $value &          0xFFFFFFFF } }]
+			  set row [map value $row { expr { $value &          0xFFFFFFFF } }]
 		    } else {
-			set row [map value $row { expr { $value &  0xFFFFFFFFFFFFFFFF } }]
+			  set row [map value $row { expr { $value &  0xFFFFFFFFFFFFFFFF } }]
 		    }
 		 }
 		}

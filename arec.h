@@ -1,4 +1,5 @@
 
+#define Max(x, y)	((x>y) ? (x) : (y))
 
 #define ARecPadd(offset, align) ((offset + align - 1) & ~(align - 1))
 

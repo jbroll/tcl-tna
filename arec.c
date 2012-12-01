@@ -245,29 +245,68 @@ int ARecInstObjCmd(data, interp, objc, objv)
     int              objc;
     Tcl_Obj        **objv;
 {
-
     Tcl_Obj *result = Tcl_GetObjResult(interp);
 
     ARecInst *inst = (ARecInst *) data;
-    char        *recs = inst->recs;
+    char        *recs;
 
     int n, m;
 
-    if ( ARecRange(interp, inst, &objc, &objv, &n, &m) == TCL_ERROR ) {
+    ARecCmd(interp, inst, "length", " ", objc == 2 || objc == 3, objc, objv,
+	int n;
+
+	if ( objc == 3 ) {
+	    if ( Tcl_GetIntFromObj(interp, objv[2], &n) != TCL_OK  ) { return TCL_ERROR; }
+
+	    ARecRealloc(inst, n, 0);
+	}
+
+	Tcl_SetIntObj(result, inst->nrecs);
+
+	return TCL_OK;
+    );
+
+    if ( ARecRange(interp, inst, &objc, &objv, &n, &m) == TCL_ERROR ) {		// All commands below here allow ranges.
 	return TCL_ERROR;
     }
-    recs += n * inst->type->size;
+
+    if ( n+m-1 < 0 || n+m-1 > inst->nrecs )  {
+	Tcl_AppendStringsToObj(result, Tcl_GetString(inst->type->nameobj), " index out of range ", Tcl_GetString(index), NULL);
+
+	return TCL_ERROR;
+    }
 
     ARecCmd(interp, inst, "set", " field value ...", objc >= 3, objc, objv,
+	if ( n+m-1 == inst->nrecs ) { ARecRealloc(inst, n+m, 10); }
+
+	recs = inst->recs + n * inst->type->size;
+
 	return ARecSetFromArgs(interp, inst->type, recs, m, objc-2, objv+2);
     );
 
     ARecCmd(interp, inst, "setdict", " field value ...", objc >= 3, objc, objv,
+	if ( n+m-1 == inst->nrecs ) { ARecRealloc(inst, n+m, 10); }
+
+	recs = inst->recs + n * inst->type->size;
+
 	return ARecSetFromDict(interp, inst->type, recs, m, objc-2, objv+2);
     );
     ARecCmd(interp, inst, "setlist", " field value ...", objc >= 3, objc, objv,
+	if ( n+m-1 == inst->nrecs ) { ARecRealloc(inst, n+m, 10); }
+
+	recs = inst->recs + n * inst->type->size;
+
 	return ARecSetFromList(interp, inst->type, recs, m, objc-2, objv+2);
     );
+
+
+    if ( n + m-1 >= inst->nrecs ) {						// All commands below here do not allow extension
+	Tcl_AppendStringsToObj(result , Tcl_GetString(inst->type->nameobj), " index out of range ", Tcl_GetString(index), NULL);
+	
+	return TCL_ERROR;
+    }
+
+    recs = inst->recs + n * inst->type->size;
 
     ARecCmd(interp, inst, "get"    , " ?field? ...", objc >= 2, objc, objv,
 	return ARecGet(interp, inst->type, recs, m, 0, objc-2, objv+2);
@@ -277,10 +316,6 @@ int ARecInstObjCmd(data, interp, objc, objv)
     );
     ARecCmd(interp, inst, "getdict", " ?field? ...", objc >= 2, objc, objv,
 	return ARecGet(interp, inst->type, recs, m, 1, objc-2, objv+2);
-    );
-    ARecCmd(interp, inst, "length", " ", objc == 2, objc, objv,
-	Tcl_SetIntObj(result, inst->nrecs);
-	return TCL_OK;
     );
 
     ARecCmd(interp, inst, "getbytes", " ", objc == 2, objc, objv,
@@ -477,15 +512,6 @@ int ARecIndex(ARecInst *inst, Tcl_Obj *result, int *objc, Tcl_Obj ***objv, int *
     Tcl_Obj *index = (*objv)[1];
 
     if ( Tcl_GetIntFromObj(NULL, index, n) == TCL_OK  ) {
-	if ( *n >= inst->nrecs ) {						
-	    Tcl_AppendStringsToObj(result
-		, Tcl_GetString(inst->type->nameobj)
-		, " index out of range "
-		, Tcl_GetString(index)
-		, NULL);
-	    return TCL_ERROR;
-	}
-
 	(*objc)--;								
 	(*objv)++;								
     } else {
@@ -516,13 +542,24 @@ int ARecIndex(ARecInst *inst, Tcl_Obj *result, int *objc, Tcl_Obj ***objv, int *
     return TCL_OK;
 }
 
+ARecRealloc(ARecInst *inst, int nrecs, int more) 
+{
+    if ( nrecs >  inst->arecs ) {
+	inst->arecs = nrecs + more;
+
+	inst->recs = Tcl_Realloc((char *) inst->recs, inst->arecs * inst->type->size);
+
+	memset(&inst->recs[inst->nrecs * inst->type->size], 0, inst->type->size * more);
+    }
+    inst->nrecs = nrecs;
+}
+
 int ARecRange(Tcl_Interp *interp, ARecInst *inst, int *objc, Tcl_Obj ***objv, int *n, int *m)
 {
     Tcl_Obj  	 *result = Tcl_GetObjResult(interp);
 
     *n = 0;
     *m = 0;
-
 
     if ( *objc > 1 && ARecIndex(inst, result, objc, objv, n) != TCL_OK  ) { return TCL_ERROR; }
     *m = *n;								
