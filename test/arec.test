@@ -1,6 +1,6 @@
 #!/usr/bin/env tclkit8.6
 #
-lappend auto_path /Users/john/lib lib
+lappend auto_path ../lib lib
 
 package require tcltest
 package require arec
