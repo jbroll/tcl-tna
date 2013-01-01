@@ -26,7 +26,7 @@
         ::	{   10		 2	left	name  }
 	++	{   20		 1	left	inc   }
 	--	{   20		 1	left	dec   }
-	 .###	{   20		 2	left	dot   }
+	 .	{   20		 2	left	dot   }
     	->	{   20		 2	left	arrow }
 	++u	{   30		 1	right	uinc  }
 	--u	{   30		 1	right	udec  }
@@ -79,10 +79,9 @@
     # for "lexical analysis".
     #
     proc prep-tokens { tokens } {
-	variable opers
 
 	foreach token [dict keys $tokens] {
-	    set opers([lindex [dict get $tokens $token] 3]) $token
+	    if { $token eq "." } { continue }
 
 	    set token [string map { u {} } $token]
 	    lappend map $token " $token "

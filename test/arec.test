@@ -7,23 +7,23 @@ package require arec
 
 
 
-::tcltest::configure -testdir [file dirname [file normalize [info script]]] -singleproc 1
+::tcltest::configure -testdir [file dirname [file normalize [info script]]] -singleproc 1 -verbose start
 
-::tcltest::test rec { dtype size     } -body { arec::dtype size } -result 20
+::tcltest::test rec-dtype-size { dtype size     } -body { arec::dtype size } -result 24
 
-::tcltest::test rec { dtype types    } -body { arec::dtype types  } -result {string int int}
-::tcltest::test rec { dtype names    } -body { arec::dtype names  } -result {name size align}
-::tcltest::test rec { dtype fields   } -body { arec::dtype fields } -result {string name int size int align}
+::tcltest::test rec-dtype-types { dtype types    } -body { arec::dtype types  } -result {string int int}
+::tcltest::test rec-dtype-names { dtype names    } -body { arec::dtype names  } -result {name size align}
+::tcltest::test rec-dtype-field { dtype fields   } -body { arec::dtype fields } -result {string name int size int align}
 
 
-::tcltest::test rec { dtypes length  } -body { arec::dtypes length } -result 8
-::tcltest::test rec { dtypes get     } -body { arec::dtypes 0 end get     } -result {{char 1 1} {uchar 1 1} {short 2 2} {ushort 2 2} {int 4 4} {float 4 4} {double 8 4} {string 4 4}}
-::tcltest::test rec { dtypes getlist } -body { arec::dtypes 0 end getlist } -result {{char 1 1} {uchar 1 1} {short 2 2} {ushort 2 2} {int 4 4} {float 4 4} {double 8 4} {string 4 4}}
-::tcltest::test rec { dtypes getdict } -body { arec::dtypes 0 end getdict } -result {{name char size 1 align 1} {name uchar size 1 align 1} {name short size 2 align 2} {name ushort size 2 align 2} {name int size 4 align 4} {name float size 4 align 4} {name double size 8 align 4} {name string size 4 align 4}}
+::tcltest::test rec-dtypes-length  { dtypes length  } -body { arec::dtypes length } -result 8
+::tcltest::test rec-dtypes-get     { dtypes get     } -body { arec::dtypes 0 end get     } -result {{char 1 1} {uchar 1 1} {short 2 2} {ushort 2 2} {int 4 4} {float 4 4} {double 8 4} {string 4 4}}
+::tcltest::test rec-dtypes-getlist { dtypes getlist } -body { arec::dtypes 0 end getlist } -result {{char 1 1} {uchar 1 1} {short 2 2} {ushort 2 2} {int 4 4} {float 4 4} {double 8 4} {string 4 4}}
+::tcltest::test rec-dtypes-getdict { dtypes getdict } -body { arec::dtypes 0 end getdict } -result {{name char size 1 align 1} {name uchar size 1 align 1} {name short size 2 align 2} {name ushort size 2 align 2} {name int size 4 align 4} {name float size 4 align 4} {name double size 8 align 4} {name string size 4 align 4}}
 
 
 foreach type [arec::dtypes 0 end get name] reply { 1 1 1 1 1 1.0 1.0 1 } {
-    ::tcltest::test rec "each type: $type" -body {
+    ::tcltest::test rec-$type "each type: $type" -body {
 	arec::typedef blink [subst { $type 	count }]
 
 	blink new blonk 1
@@ -35,7 +35,7 @@ foreach type [arec::dtypes 0 end get name] reply { 1 1 1 1 1 1.0 1.0 1 } {
 
 
 foreach i { 0 1 2 3 4 5 6 7 8 9 0 } {
-    ::tcltest::test rec { new type } -body {
+    ::tcltest::test rec-$i { new type } -body {
 	arec::typedef blink {
 	    int 	count
 	    int 	bunk
@@ -49,6 +49,7 @@ foreach i { 0 1 2 3 4 5 6 7 8 9 0 } {
 
 	blonk 0 set count 6
 	blonk 3 set chunk 5.5
+
 
 	blonk 0 end get
     } -cleanup { rename blonk {}
