@@ -23,6 +23,9 @@ $(nproc): nproc.tcl
 	rm -rf lib/nproc/macosx-ix86
 	mv lib/nproc/macosx-x86_32 lib/nproc/macosx-ix86
 
+arec-test : FORCE
+	./tna-test.tcl -file 'arec.*'
+
 test: FORCE
 	./tna-test.tcl
 

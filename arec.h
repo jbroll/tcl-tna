@@ -49,8 +49,9 @@ typedef struct _ARecDType {
     char	*name;
     int		 size;
     int		 align;
-    int		(*set)(Tcl_Obj *, void *);
-    Tcl_Obj*	(*get)(void *);
+    struct _ARecTypeTable *type;
+    int		(*set)(struct _ARecTypeTable *type, Tcl_Obj *, void *);
+    Tcl_Obj*	(*get)(struct _ARecTypeTable *type, void *);
 } ARecDType;
 
 typedef struct _ARecTypeTable {
@@ -77,13 +78,13 @@ typedef struct _ARecInst {
     int			arecs;
 } ARecInst;
 
-Tcl_Obj *ARecGetDouble(void *here);
-Tcl_Obj *ARecGetFloat( void *here);
-Tcl_Obj *ARecGetInt(   void *here);
+Tcl_Obj *ARecGetDouble(ARecTypeTable *type, void *here);
+Tcl_Obj *ARecGetFloat( ARecTypeTable *type, void *here);
+Tcl_Obj *ARecGetInt(   ARecTypeTable *type, void *here);
 
-int ARecSetDouble(Tcl_Obj *obj, void *here);
-int ARecSetFloat( Tcl_Obj *obj, void *here);
-int ARecSetInt(   Tcl_Obj *obj, void *here);
+int ARecSetDouble(ARecTypeTable *type, Tcl_Obj *obj, void *here);
+int ARecSetFloat( ARecTypeTable *type, Tcl_Obj *obj, void *here);
+int ARecSetInt(   ARecTypeTable *type, Tcl_Obj *obj, void *here);
 
 int ARecNewInst(Tcl_Interp *interp, int objc, Tcl_Obj **objv, ARecType *type);
 int ARecSetFromArgs(Tcl_Interp *interp

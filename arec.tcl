@@ -24,6 +24,8 @@ namespace eval arec {
     proc double { args } { $::arec::type add-field double {*}$args }
     proc string { args } { $::arec::type add-field string {*}$args }
 
+    proc struct { args } { $::arec::type add-struct {*}$args }
+
     critcl::ccode {
 	#include "arec.h"
 

@@ -13,18 +13,18 @@
 #include <tcl.h>
 #include "arec.h"
 
-Tcl_Obj *ARecGetDouble(void *here) { return Tcl_NewDoubleObj(*((double *) here)); }
-Tcl_Obj *ARecGetFloat( void *here) { return Tcl_NewDoubleObj(*((float  *) here)); }
-Tcl_Obj *ARecGetInt(   void *here) { return Tcl_NewIntObj(   *((int    *) here)); }
-Tcl_Obj *ARecGetUShort(void *here) { return Tcl_NewIntObj(   *((unsigned short *) here)); }
-Tcl_Obj *ARecGetShort( void *here) { return Tcl_NewIntObj(   *((short  *) here)); }
-Tcl_Obj *ARecGetUChar( void *here) { return Tcl_NewIntObj(   *((char   *) here)); }
-Tcl_Obj *ARecGetChar(  void *here) { return Tcl_NewIntObj(   *((unsigned char *) here)); }
-Tcl_Obj *ARecGetString(void *here) { return Tcl_NewStringObj(*((char  **) here), -1); }
+Tcl_Obj *ARecGetDouble(ARecTypeTable *type, void *here) { return Tcl_NewDoubleObj(*((double *) here)); }
+Tcl_Obj *ARecGetFloat( ARecTypeTable *type, void *here) { return Tcl_NewDoubleObj(*((float  *) here)); }
+Tcl_Obj *ARecGetInt(   ARecTypeTable *type, void *here) { return Tcl_NewIntObj(   *((int    *) here)); }
+Tcl_Obj *ARecGetUShort(ARecTypeTable *type, void *here) { return Tcl_NewIntObj(   *((unsigned short *) here)); }
+Tcl_Obj *ARecGetShort( ARecTypeTable *type, void *here) { return Tcl_NewIntObj(   *((short  *) here)); }
+Tcl_Obj *ARecGetUChar( ARecTypeTable *type, void *here) { return Tcl_NewIntObj(   *((char   *) here)); }
+Tcl_Obj *ARecGetChar(  ARecTypeTable *type, void *here) { return Tcl_NewIntObj(   *((unsigned char *) here)); }
+Tcl_Obj *ARecGetString(ARecTypeTable *type, void *here) { return Tcl_NewStringObj(*((char  **) here), -1); }
 
 
-int ARecSetDouble(Tcl_Obj *obj, void *here) { return Tcl_GetDoubleFromObj(NULL, obj, (double *) here); }
-int ARecSetFloat( Tcl_Obj *obj, void *here) {
+int ARecSetDouble(ARecTypeTable *type, Tcl_Obj *obj, void *here) { return Tcl_GetDoubleFromObj(NULL, obj, (double *) here); }
+int ARecSetFloat( ARecTypeTable *type, Tcl_Obj *obj, void *here) {
     	double dbl;
 
     if ( Tcl_GetDoubleFromObj( NULL, obj, &dbl) == TCL_ERROR ) { return TCL_ERROR; }
@@ -32,8 +32,8 @@ int ARecSetFloat( Tcl_Obj *obj, void *here) {
 
     return TCL_OK;
 }
-int ARecSetInt(   Tcl_Obj *obj, void *here) { return Tcl_GetIntFromObj(   NULL, obj, (int    *) here); }
-int ARecSetUShort(Tcl_Obj *obj, void *here) {
+int ARecSetInt(   ARecTypeTable *type, Tcl_Obj *obj, void *here) { return Tcl_GetIntFromObj(   NULL, obj, (int    *) here); }
+int ARecSetUShort(ARecTypeTable *type, Tcl_Obj *obj, void *here) {
     	int i;
 
     if ( Tcl_GetIntFromObj( NULL, obj, &i) == TCL_ERROR ) { return TCL_ERROR; }
@@ -41,7 +41,7 @@ int ARecSetUShort(Tcl_Obj *obj, void *here) {
 
     return TCL_OK;
 }
-int ARecSetShort( Tcl_Obj *obj, void *here) {
+int ARecSetShort( ARecTypeTable *type, Tcl_Obj *obj, void *here) {
     	int i;
 
     if ( Tcl_GetIntFromObj( NULL, obj, &i) == TCL_ERROR ) { return TCL_ERROR; }
@@ -49,7 +49,7 @@ int ARecSetShort( Tcl_Obj *obj, void *here) {
 
     return TCL_OK;
 }
-int ARecSetUChar(Tcl_Obj *obj, void *here) {
+int ARecSetUChar(ARecTypeTable *type, Tcl_Obj *obj, void *here) {
     	int i;
 
     if ( Tcl_GetIntFromObj( NULL, obj, &i) == TCL_ERROR ) { return TCL_ERROR; }
@@ -57,7 +57,7 @@ int ARecSetUChar(Tcl_Obj *obj, void *here) {
 
     return TCL_OK;
 }
-int ARecSetChar(Tcl_Obj *obj, void *here) {
+int ARecSetChar(ARecTypeTable *type, Tcl_Obj *obj, void *here) {
     	int i;
 
     if ( Tcl_GetIntFromObj( NULL, obj, &i) == TCL_ERROR ) { return TCL_ERROR; }
@@ -65,7 +65,7 @@ int ARecSetChar(Tcl_Obj *obj, void *here) {
 
     return TCL_OK;
 }
-int ARecSetString(Tcl_Obj *obj, void *here) {
+int ARecSetString(ARecTypeTable *type, Tcl_Obj *obj, void *here) {
     	char *str = *((char **)here);
 
     if ( str ) { free(str); }
@@ -79,14 +79,14 @@ int ARecSetString(Tcl_Obj *obj, void *here) {
 	/* Collect all these structs together to allow introspection.
 	 */
 	ARecDType ARecDTypes[] = {
-		  { "char",	sizeof(char)		, 1, ARecSetChar,	ARecGetChar   }
-		, { "uchar",	sizeof(unsigned char)	, 1, ARecSetUChar,	ARecGetUChar  }
-		, { "short",	sizeof(short)		, 2, ARecSetShort,	ARecGetShort  }
-		, { "ushort",	sizeof(unsigned short)	, 2, ARecSetUShort,	ARecGetUShort }
-		, { "int",	sizeof(int)		, 4, ARecSetInt,	ARecGetInt    }
-		, { "float",	sizeof(float)		, 4, ARecSetFloat,	ARecGetFloat  }
-		, { "double",	sizeof(double)		, 4, ARecSetDouble,	ARecGetDouble }
-		, { "string",	sizeof(char *)		, 4, ARecSetString,	ARecGetString }
+		  { "char",	sizeof(char)		, 1, NULL, ARecSetChar,	ARecGetChar   }
+		, { "uchar",	sizeof(unsigned char)	, 1, NULL, ARecSetUChar,	ARecGetUChar  }
+		, { "short",	sizeof(short)		, 2, NULL, ARecSetShort,	ARecGetShort  }
+		, { "ushort",	sizeof(unsigned short)	, 2, NULL, ARecSetUShort,	ARecGetUShort }
+		, { "int",	sizeof(int)		, 4, NULL, ARecSetInt,	ARecGetInt    }
+		, { "float",	sizeof(float)		, 4, NULL, ARecSetFloat,	ARecGetFloat  }
+		, { "double",	sizeof(double)		, 4, NULL, ARecSetDouble,	ARecGetDouble }
+		, { "string",	sizeof(char *)		, 4, NULL, ARecSetString,	ARecGetString }
 		, { NULL }
 	};
 
@@ -143,7 +143,7 @@ ARecTypeTable *ARecLookup(ARecTypeTable *table, Tcl_Obj *nameobj)
 
 
 int ARecSetField(ARecTypeTable *table, char *record, Tcl_Obj *obj) {
-	return table == NULL ? TCL_ERROR : table->dtype->set(obj, record + table->offset);
+	return table == NULL ? TCL_ERROR : table->dtype->set(table->dtype->type, obj, record + table->offset);
 }
 
 int ARecDelInst(ClientData data)
@@ -741,7 +741,7 @@ int ARecGet(Tcl_Interp *interp
 		}
 	    }
 
-	    if ( Tcl_ListObjAppendElement(interp, reply, map[i]->dtype->get(recs + map[i]->offset)) == TCL_ERROR ) {
+	    if ( Tcl_ListObjAppendElement(interp, reply, map[i]->dtype->get(map[i]->dtype->type, recs + map[i]->offset)) == TCL_ERROR ) {
 		Tcl_Free((void *) map);
 		return TCL_ERROR;
 	    }

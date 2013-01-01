@@ -7,7 +7,7 @@ package require arec
 
 
 
-::tcltest::configure -testdir [file dirname [file normalize [info script]]] -singleproc 1 -verbose start
+::tcltest::configure -testdir [file dirname [file normalize [info script]]] -singleproc 1  ; # -verbose start
 
 ::tcltest::test rec-dtype-size { dtype size     } -body { arec::dtype size } -result 24
 
