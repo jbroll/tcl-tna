@@ -82,12 +82,12 @@ int ARecSetString(ARecTypeTable *type, Tcl_Obj *obj, void *here) {
 	/* Collect all these structs together to allow introspection.
 	 */
 	ARecDType ARecDTypes[] = {
-		  { "char",	sizeof(char)		, 1, NULL, ARecSetChar,	ARecGetChar   }
+		  { "char",	sizeof(char)		, 1, NULL, ARecSetChar,		ARecGetChar   }
 		, { "uchar",	sizeof(unsigned char)	, 1, NULL, ARecSetUChar,	ARecGetUChar  }
 		, { "short",	sizeof(short)		, 2, NULL, ARecSetShort,	ARecGetShort  }
 		, { "ushort",	sizeof(unsigned short)	, 2, NULL, ARecSetUShort,	ARecGetUShort }
-		, { "long",	sizeof(long)		, 4, NULL, ARecSetLong,		ARecGetLong    }
 		, { "int",	sizeof(int)		, 4, NULL, ARecSetInt,		ARecGetInt    }
+		, { "long",	sizeof(long)		, 4, NULL, ARecSetLong,		ARecGetLong    }
 		, { "float",	sizeof(float)		, 4, NULL, ARecSetFloat,	ARecGetFloat  }
 		, { "double",	sizeof(double)		, 4, NULL, ARecSetDouble,	ARecGetDouble }
 		, { "string",	sizeof(char *)		, 4, NULL, ARecSetString,	ARecGetString }
@@ -95,7 +95,7 @@ int ARecSetString(ARecTypeTable *type, Tcl_Obj *obj, void *here) {
 	};
 
 	ARecTypeTable ARecDTypesTypeTable[] = {
-	      { (Tcl_Obj *) "name",  offsetof(ARecDType, name),  &ARecDTypes[7] }
+	      { (Tcl_Obj *) "name",  offsetof(ARecDType, name),  &ARecDTypes[8] }
 	    , { (Tcl_Obj *) "size",  offsetof(ARecDType, size),  &ARecDTypes[4] }
 	    , { (Tcl_Obj *) "align", offsetof(ARecDType, align), &ARecDTypes[4] }
 	};

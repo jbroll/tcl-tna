@@ -20,6 +20,7 @@ namespace eval arec {
     proc short  { args } { $::arec::type add-field short  {*}$args }
     proc ushort { args } { $::arec::type add-field ushort {*}$args }
     proc int    { args } { $::arec::type add-field int    {*}$args }
+    proc long   { args } { $::arec::type add-field long   {*}$args }
     proc float  { args } { $::arec::type add-field float  {*}$args }
     proc double { args } { $::arec::type add-field double {*}$args }
     proc string { args } { $::arec::type add-field string {*}$args }

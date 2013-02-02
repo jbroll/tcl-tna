@@ -6,23 +6,22 @@ package require tcltest
 package require arec
 
 
-
 ::tcltest::configure -testdir [file dirname [file normalize [info script]]] -singleproc 1  ; # -verbose start
 
-::tcltest::test rec-dtype-size { dtype size     } -body { arec::dtype size } -result 24
+::tcltest::test rec-dtype-size { dtype size     } -body { arec::dtype size } 		  -result 24
 
-::tcltest::test rec-dtype-types { dtype types    } -body { arec::dtype types  } -result {string int int}
-::tcltest::test rec-dtype-names { dtype names    } -body { arec::dtype names  } -result {name size align}
-::tcltest::test rec-dtype-field { dtype fields   } -body { arec::dtype fields } -result {string name int size int align}
-
-
-::tcltest::test rec-dtypes-length  { dtypes length  } -body { arec::dtypes length } -result 8
-::tcltest::test rec-dtypes-get     { dtypes get     } -body { arec::dtypes 0 end get     } -result {{char 1 1} {uchar 1 1} {short 2 2} {ushort 2 2} {int 4 4} {float 4 4} {double 8 4} {string 4 4}}
-::tcltest::test rec-dtypes-getlist { dtypes getlist } -body { arec::dtypes 0 end getlist } -result {{char 1 1} {uchar 1 1} {short 2 2} {ushort 2 2} {int 4 4} {float 4 4} {double 8 4} {string 4 4}}
-::tcltest::test rec-dtypes-getdict { dtypes getdict } -body { arec::dtypes 0 end getdict } -result {{name char size 1 align 1} {name uchar size 1 align 1} {name short size 2 align 2} {name ushort size 2 align 2} {name int size 4 align 4} {name float size 4 align 4} {name double size 8 align 4} {name string size 4 align 4}}
+::tcltest::test rec-dtype-types { dtype types    } -body { arec::dtype types  } 	  -result {string int int}
+::tcltest::test rec-dtype-names { dtype names    } -body { arec::dtype names  } 	  -result {name size align}
+::tcltest::test rec-dtype-field { dtype fields   } -body { arec::dtype fields } 	  -result {string name int size int align}
 
 
-foreach type [arec::dtypes 0 end get name] reply { 1 1 1 1 1 1.0 1.0 1 } {
+::tcltest::test rec-dtypes-length  { dtypes length  } -body { arec::dtypes length }        -result 9
+::tcltest::test rec-dtypes-get     { dtypes get     } -body { arec::dtypes 0 end get     } -result {{char 1 1} {uchar 1 1} {short 2 2} {ushort 2 2} {int 4 4} {long 4 4} {float 4 4} {double 8 4} {string 4 4}}
+::tcltest::test rec-dtypes-getlist { dtypes getlist } -body { arec::dtypes 0 end getlist } -result {{char 1 1} {uchar 1 1} {short 2 2} {ushort 2 2} {int 4 4} {long 4 4} {float 4 4} {double 8 4} {string 4 4}}
+::tcltest::test rec-dtypes-getdict { dtypes getdict } -body { arec::dtypes 0 end getdict } -result {{name char size 1 align 1} {name uchar size 1 align 1} {name short size 2 align 2} {name ushort size 2 align 2} {name int size 4 align 4} {name long size 4 align 4} {name float size 4 align 4} {name double size 8 align 4} {name string size 4 align 4}}
+
+
+foreach type [arec::dtypes 0 end get name] reply { 1 1 1 1 1 1 1.0 1.0 1 } {
     ::tcltest::test rec-$type "each type: $type" -body {
 	arec::typedef blink [subst { $type 	count }]
 
@@ -77,6 +76,53 @@ foreach i { 0 1 2 3 4 5 6 7 8 9 0 } {
     blonk end+1 set a 9
 
     blonk 0 end get
-} -cleanup {
+} -cleanup { rename blonk {}
 } -result  "[lrepeat 5 {3.3 3 5.5}] {6.0 0 0.0} {7.0 0 0.0} {8.0 0 0.0} {9.0 0 0.0}"
+
+::tcltest::test set1 { set one arg } -body {
+    arec::typedef blink {
+	double a
+	int    b
+	double c
+    }
+
+    blink new blonk 5
+    blonk 0 end set a 1 b 2 c 3
+    blonk 0 end set [blonk 0 end get]
+
+    blonk 0 end get
+} -cleanup { rename blonk {}
+} -result {{1.0 2 3.0} {1.0 2 3.0} {1.0 2 3.0} {1.0 2 3.0} {1.0 2 3.0}}
+
+::tcltest::test setdict { sedict-1 } -body {
+    arec::typedef blink {
+	double a
+	int    b
+	double c
+    }
+
+    blink new blonk 5
+    blonk 0 end set a 1 b 2 c 3
+    blonk 0 end setdict [blonk 0 end getdict]
+
+    blonk 0 end getdict
+} -cleanup { rename blonk {}
+} -result {{a 1.0 b 2 c 3.0} {a 1.0 b 2 c 3.0} {a 1.0 b 2 c 3.0} {a 1.0 b 2 c 3.0} {a 1.0 b 2 c 3.0}}
+
+::tcltest::test setlist { selist-1 } -body {
+    arec::typedef blink {
+	double a
+	int    b
+	double c
+    }
+
+    blink new blonk 5
+    blonk 0 end set a 1 b 2 c 3
+    blonk 0 end setlist [blonk 0 end getlist]
+
+    blonk 0 end setlist a b {{1 4} {2 8} {3 12} {4 16} {5 20}}
+
+    blonk 0 end getlist
+} -cleanup { rename blonk {}
+} -result {{1.0 4 3.0} {2.0 8 3.0} {3.0 12 3.0} {4.0 16 3.0} {5.0 20 3.0}}
 
