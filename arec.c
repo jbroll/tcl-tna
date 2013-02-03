@@ -183,7 +183,7 @@ int ARecTypeObjCmd(data, interp, objc, objv)
     ARecType *type = (ARecType *) data;
     Tcl_Obj *result = Tcl_GetObjResult(interp);
 
-    ARecCmd(interp, type, "new", " ?inst? ...", objc >= 3, objc, objv,
+    ARecCmd(interp, type, "create", " ?inst? ...", objc >= 3, objc, objv,
 	return ARecNewInst(interp, objc, objv, data);
     );
     ARecCmd(interp, type, "types", " ?field? ...", objc >= 2, objc, objv,
@@ -202,6 +202,9 @@ int ARecTypeObjCmd(data, interp, objc, objv)
     );
     ARecCmd(interp, type, "add-field", " type name", objc >= 4, objc, objv,
 	return ARecTypeAddField(interp, type, objc, objv);
+    );
+    ARecCmd(interp, type, "add-struct", " type name", objc >= 4, objc, objv,
+	return ARecTypeAddStruct(interp, type, objc, objv);
     );
 
     ARecUnknownMethod(interp, type, objc, objv);
@@ -399,6 +402,12 @@ int ARecTypeFields(Tcl_Interp *interp, ARecType *type, int types, int fields)
 
     return TCL_OK;
 }
+
+int ARecTypeAddStruct(Tcl_Interp *interp, ARecType *type, int objc, Tcl_Obj **objv)
+{
+    return TCL_OK;
+}
+
 
 int ARecTypeAddField(Tcl_Interp *interp, ARecType *type, int objc, Tcl_Obj **objv)
 {

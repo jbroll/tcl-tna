@@ -25,7 +25,7 @@ foreach type [arec::dtypes 0 end get name] reply { 1 1 1 1 1 1 1.0 1.0 1 } {
     ::tcltest::test rec-$type "each type: $type" -body {
 	arec::typedef blink [subst { $type 	count }]
 
-	blink new blonk 1
+	blink create blonk 1
 	blonk set count 1
 	blonk get count
     } -cleanup { rename blink {}; rename blonk {}
@@ -34,13 +34,13 @@ foreach type [arec::dtypes 0 end get name] reply { 1 1 1 1 1 1 1.0 1.0 1 } {
 
 
 foreach i { 0 1 2 3 4 5 6 7 8 9 0 } {
-    ::tcltest::test rec-$i { new type } -body {
+    ::tcltest::test rec-$i { create type } -body {
 	arec::typedef blink {
 	    int 	count
 	    int 	bunk
 	    double  chunk
 	}
-	blink new blonk 4
+	blink create blonk 4
 
 	blonk 0 end set count 4
 	blonk 0 end set bunk  4
@@ -63,7 +63,7 @@ foreach i { 0 1 2 3 4 5 6 7 8 9 0 } {
 	double c
     }
 
-    blink new blonk 5
+    blink create blonk 5
 
     blonk 0 end set a 3.3
     blonk 0 end set b 3
@@ -86,7 +86,7 @@ foreach i { 0 1 2 3 4 5 6 7 8 9 0 } {
 	double c
     }
 
-    blink new blonk 5
+    blink create blonk 5
     blonk 0 end set a 1 b 2 c 3
     blonk 0 end set [blonk 0 end get]
 
@@ -101,7 +101,7 @@ foreach i { 0 1 2 3 4 5 6 7 8 9 0 } {
 	double c
     }
 
-    blink new blonk 5
+    blink create blonk 5
     blonk 0 end set a 1 b 2 c 3
     blonk 0 end setdict [blonk 0 end getdict]
 
@@ -116,7 +116,7 @@ foreach i { 0 1 2 3 4 5 6 7 8 9 0 } {
 	double c
     }
 
-    blink new blonk 5
+    blink create blonk 5
     blonk 0 end set a 1 b 2 c 3
     blonk 0 end setlist [blonk 0 end getlist]
 
