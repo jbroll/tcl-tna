@@ -10,7 +10,7 @@ namespace eval arec {
     proc types {} { return $::arec::types }
 
     proc typedef { type body } {
-	lappend  ::arec::types [set ::arec::type [NewType $type]]
+	lappend  ::arec::types [set ::arec::type [::arec::add_type $type]]
 
 	eval $body
 
@@ -35,7 +35,7 @@ namespace eval arec {
 	extern int ARecInstObjCmd();
 	extern int ARecDelInst();
     }
-    critcl::ccommand NewType { data interp objc objv } { return ARecNewType(interp, objc, objv); }
+    critcl::ccommand add_type { data interp objc objv } { return ARecTypeCreateObjCmd(interp, objc, objv); }
     critcl::cinit {
 	ARecInit(ip);
     } { }

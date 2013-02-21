@@ -44,47 +44,49 @@
 	    return TCL_ERROR;								\
 	}
 
-
-typedef struct _ARecDType {
-    char	*name;
-    int		 size;
-    int		 align;
-    struct _ARecTypeTable *type;
-    int		(*set)(struct _ARecTypeTable *type, Tcl_Obj *, void *);
-    Tcl_Obj*	(*get)(struct _ARecTypeTable *type, void *);
-} ARecDType;
-
-typedef struct _ARecTypeTable {
+typedef struct _ARecField {
     Tcl_Obj		*nameobj;
     int	 	 	 offset;
-    ARecDType		*dtype;
-} ARecTypeTable;
+    struct _ARecDType	*dtype;
+} ARecField;
+
+typedef int  (*ARecSetFunc)(struct _ARecField *type, Tcl_Obj *, void *);
+typedef Tcl_Obj*  (*ARecGetFunc)(struct _ARecField *type, void *);
+
+typedef struct _ARecDType {
+    Tcl_Obj	*nameobj;
+    int		 size;
+    int		 align;
+    struct _ARecField *type;
+    int		(*set)(struct _ARecField *type, Tcl_Obj *, void *);
+    Tcl_Obj*	(*get)(struct _ARecField *type, void *);
+    struct _ARecDType *shadow;
+} ARecDType;
 
 typedef struct _ARecType {
-    Tcl_Obj	     *nameobj;
-    int		      size;
-    int		     nfield;
-    int		     afield;
-    ARecTypeTable   *field;
+    Tcl_Obj	     	*nameobj;
+    int		     	 size;
+    int		    	 nfield;
+    int		    	 afield;
+    ARecField       	*field;
     struct _ARecInst    *instances;
 } ARecType;
 
 typedef struct _ARecInst {
-    Tcl_Obj	*nameobj;
-    ARecType	*type;
-    struct _ARecInst	*next;
+    Tcl_Obj		*nameobj;
+    ARecType		*type;
     void		*recs;
-    int			nrecs;
-    int			arecs;
+    int			 nrecs;
+    int			 arecs;
 } ARecInst;
 
-Tcl_Obj *ARecGetDouble(ARecTypeTable *type, void *here);
-Tcl_Obj *ARecGetFloat( ARecTypeTable *type, void *here);
-Tcl_Obj *ARecGetInt(   ARecTypeTable *type, void *here);
+Tcl_Obj *ARecGetDouble(ARecField *type, void *here);
+Tcl_Obj *ARecGetFloat( ARecField *type, void *here);
+Tcl_Obj *ARecGetInt(   ARecField *type, void *here);
 
-int ARecSetDouble(ARecTypeTable *type, Tcl_Obj *obj, void *here);
-int ARecSetFloat( ARecTypeTable *type, Tcl_Obj *obj, void *here);
-int ARecSetInt(   ARecTypeTable *type, Tcl_Obj *obj, void *here);
+int ARecSetDouble(ARecField *type, Tcl_Obj *obj, void *here);
+int ARecSetFloat( ARecField *type, Tcl_Obj *obj, void *here);
+int ARecSetInt(   ARecField *type, Tcl_Obj *obj, void *here);
 
 int ARecNewInst(Tcl_Interp *interp, int objc, Tcl_Obj **objv, ARecType *type);
 int ARecSetFromArgs(Tcl_Interp *interp
@@ -109,3 +111,6 @@ int ARecSetFromDict(Tcl_Interp *interp
 ARecDType *ARecLookupDType(Tcl_Obj *nameobj);
 
 typedef char *string;
+
+ARecInst *ARecCreateType(Tcl_Obj *name);
+

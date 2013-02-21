@@ -126,3 +126,20 @@ foreach i { 0 1 2 3 4 5 6 7 8 9 0 } {
 } -cleanup { rename blonk {}
 } -result {{1.0 4 3.0} {2.0 8 3.0} {3.0 12 3.0} {4.0 16 3.0} {5.0 20 3.0}}
 
+::tcltest::test alloc { selist-1 } -body {
+    arec::typedef blink {
+	double a
+	int    b
+	double c
+    }
+
+    blink create blonk 0
+    foreach i [iota 0 100] {
+	blonk $i set a 1 b 2 c 3
+    }
+} -cleanup { rename blonk {}
+} -result {}
+
+
+
+
