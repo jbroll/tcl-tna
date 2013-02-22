@@ -29,6 +29,7 @@ Tcl_Obj *ARecGetShort( ARecField *type, void *here) { return Tcl_NewIntObj(   *(
 Tcl_Obj *ARecGetUChar( ARecField *type, void *here) { return Tcl_NewIntObj(   *((char   *) here)); }
 Tcl_Obj *ARecGetChar(  ARecField *type, void *here) { return Tcl_NewIntObj(   *((unsigned char *) here)); }
 Tcl_Obj *ARecGetString(ARecField *type, void *here) { return Tcl_NewStringObj(*((char  **) here), -1); }
+Tcl_Obj *ARecGetTclObj(ARecField *type, void *here) { return *((Tcl_Obj  **) here); }
 
 
 int ARecSetDouble(ARecField *type, Tcl_Obj *obj, void *here) { return Tcl_GetDoubleFromObj(NULL, obj, (double *) here); }
@@ -89,23 +90,26 @@ int ARecSetString(ARecField *type, Tcl_Obj *obj, void *here) {
 ARecDType *ARecLookupDType(Tcl_Obj *nameobj)
 {
     ARecDType *table = ARecDTypeTypes;
+    int i;
 
     char *name = Tcl_GetString(nameobj);
 
-    for ( ; table->nameobj != NULL; table++ ) {
-	if ( !strcmp(Tcl_GetString(table->nameobj), name) ) {
-	    return table->shadow;
+    ARecDType *dtypes = ARecDTypeInst->recs;
+
+    for ( i = 0; i < ARecDTypeInst->nrecs; i++ ) {
+	if ( !strcmp(Tcl_GetString(dtypes[i].nameobj), name) ) {
+	    return dtypes[i].shadow;
 	}
     }
 
     return NULL;
 }
 
-ARecField *ARecLookupField(ARecField *table, Tcl_Obj *nameobj)
+ARecField *ARecLookupField(int n, ARecField *table, Tcl_Obj *nameobj)
 {
     char *name = Tcl_GetString(nameobj);
 
-    for ( ; table->nameobj != NULL; table++ ) {
+    for ( ; n--; table++ ) {
 	if ( !strcmp(Tcl_GetString(table->nameobj), name) ) {
 	    return table;
 	}
@@ -173,9 +177,6 @@ int ARecTypeObjCmd(data, ip, objc, objv)
     ARecCmd(ip, type, "add-field", " type name", objc >= 4, objc, objv,
 	return ARecTypeAddField(ip, type, objc, objv);
     );
-    ARecCmd(ip, type, "add-struct", " type name", objc >= 4, objc, objv,
-	return ARecTypeAddStruct(ip, type, objc, objv);
-    );
 
     ARecUnknownMethod(ip, type, objc, objv);
 
@@ -212,7 +213,7 @@ int ARecTypeCreateObjCmd(Tcl_Interp *ip, int objc, Tcl_Obj **objv)
 	ARecType *type;
 
     if ( objc != 2 ) {
-	Tcl_SetStringObj(result, "CreateType type", -1);				\
+	Tcl_SetStringObj(result, "TypeCreate type", -1);				\
 	return TCL_ERROR;
     }
 
@@ -259,12 +260,15 @@ int ARecInstObjCmd(data, ip, objc, objv)
 	char index[50];
 	sprintf(index, "%d %d", n, m);
 
+	    printf("alloc? %d %d\n", n+m-1, inst->nrecs);
+
 	Tcl_AppendStringsToObj(result, Tcl_GetString(inst->type->nameobj), " index out of range ", index, NULL);
 
 	return TCL_ERROR;
     }
 
     ARecCmd(ip, inst, "set", " field value ...", objc >= 3, objc, objv,
+
 	if ( n+m-1 == inst->nrecs ) { ARecRealloc(inst, n+m, 10); }
 
 	recs = inst->recs + n * inst->type->size;
@@ -329,21 +333,12 @@ int ARecInstObjCmd(data, ip, objc, objv)
     return TCL_ERROR;
 }
 
-int ARecNewInst(Tcl_Interp *ip, int objc, Tcl_Obj **objv, ARecType *type)
+ARecInst *ARecInstCreate(Tcl_Interp *ip, Tcl_Obj *nameobj, ARecType *type, int n)
 {
-	Tcl_Obj     *result = Tcl_GetObjResult(ip);
-	int	     n = 1;
 	ARecInst *inst;
 
-    if ( objc == 4 ) {
-	if ( Tcl_GetIntFromObj(ip, objv[3], &n) != TCL_OK  ) {
-	    Tcl_SetStringObj(result, "cannot convert size arg to int", -1);				\
-	    return TCL_ERROR;
-	}
-    }
-
     inst          = (ARecInst *) Tcl_Alloc(sizeof(ARecInst));
-    inst->nameobj = objv[2];
+    inst->nameobj = nameobj;
     Tcl_IncrRefCount(inst->nameobj);
 
     inst->type    = type;
@@ -353,15 +348,32 @@ int ARecNewInst(Tcl_Interp *ip, int objc, Tcl_Obj **objv, ARecType *type)
 
     memset(inst->recs, 0, type->size * inst->nrecs);
 
-    Tcl_CreateObjCommand(ip, Tcl_GetString(objv[2])
+    Tcl_CreateObjCommand(ip, Tcl_GetString(nameobj)
 	, ARecInstObjCmd
 	, (ClientData) inst
 	, (Tcl_CmdDeleteProc *) ARecDelInst);
 
-    Tcl_SetObjResult(ip, objv[2]);	
+    Tcl_SetObjResult(ip, nameobj);
 
     //inst->next = type->instances;
     type->instances = inst;
+
+    return inst;
+}
+
+int ARecNewInst(Tcl_Interp *ip, int objc, Tcl_Obj **objv, ARecType *type)
+{
+	Tcl_Obj     *result = Tcl_GetObjResult(ip);
+	int	     n = 1;
+
+    if ( objc == 4 ) {
+	if ( Tcl_GetIntFromObj(ip, objv[3], &n) != TCL_OK  ) {
+	    Tcl_SetStringObj(result, "cannot convert size arg to int", -1);				\
+	    return TCL_ERROR;
+	}
+    }
+
+    ARecInstCreate(ip, objv[2], type, n);
 
     return TCL_OK;
 }
@@ -388,12 +400,13 @@ int ARecTypeAddStruct(Tcl_Interp *ip, ARecType *type, int objc, Tcl_Obj **objv)
 
 void ARecTypeAddField1(ARecType *type, Tcl_Obj *nameobj, ARecDType *dtype) {
     int  i;
-    int size;
+    int size = 0;
     int maxx;
 
     if ( type->nfield >= type->afield-1 ) {
 	type->afield += 10;
 	type->field = (ARecField *) Tcl_Realloc((char *) type->field, sizeof(ARecField) * type->afield);
+
     }
 
     maxx = dtype->align;
@@ -405,6 +418,7 @@ void ARecTypeAddField1(ARecType *type, Tcl_Obj *nameobj, ARecDType *dtype) {
 	    maxx = type->field[i].dtype->align;
 	}
     }
+
 
     type->field[type->nfield].nameobj = nameobj;
     Tcl_IncrRefCount(nameobj);
@@ -436,9 +450,10 @@ int ARecTypeAddField(Tcl_Interp *ip, ARecType *type, int objc, Tcl_Obj **objv)
 	return TCL_ERROR;
     }
     
-    if ( !(dtype = (ARecDType *) ARecLookupField(type->field, objv[2])) ) {
+
+    if ( !(dtype = (ARecDType *) ARecLookupDType(objv[2])) ) {
 	Tcl_AppendStringsToObj(result
-		, Tcl_GetString(objv[0])
+		, Tcl_GetString(objv[2])
 		, " unknown data type "
 		, NULL);
 
@@ -446,7 +461,7 @@ int ARecTypeAddField(Tcl_Interp *ip, ARecType *type, int objc, Tcl_Obj **objv)
     }
 
     for ( i = 3; i < objc; i++ ) {
-	if ( ARecLookupField(type->field, objv[i]) ) {
+	if ( ARecLookupField(type->nfield, type->field, objv[i]) ) {
 	    Tcl_AppendStringsToObj(result
 		    , Tcl_GetString(objv[0])
 		    , " already has a field named "
@@ -479,7 +494,7 @@ ARecField **ARecFieldMap(Tcl_Obj *result
 	}
     } else {
 	for ( i = 0; i < objc; i++ ) {
-	    if ( !(map[i] = ARecLookupField(type->field, objv[i])) ) {
+	    if ( !(map[i] = ARecLookupField(type->nfield, type->field, objv[i])) ) {
 		Tcl_Free((char *) map);
 
 		Tcl_AppendStringsToObj(result
@@ -545,8 +560,6 @@ int ARecIndex(ARecInst *inst, Tcl_Obj *result, int *objc, Tcl_Obj ***objv, int *
 
 ARecRealloc(ARecInst *inst, int nrecs, int more) 
 {
-    printf("%p\n", inst->recs);
-
     if ( nrecs >  inst->arecs ) {
 	inst->arecs = nrecs + more;
 
@@ -590,7 +603,7 @@ int ARecSetFromArgs(Tcl_Interp *ip
 
     for ( j = 0; j < n; j++ ) {
 	for ( i = 0; i < objc; i += 2 ) {
-	    ARecField *field = ARecLookupField(type->field, objv[i+0]);
+	    ARecField *field = ARecLookupField(type->nfield, type->field, objv[i+0]);
 
 	    if ( !field ) {
 		Tcl_AppendStringsToObj(result , Tcl_GetString(type->nameobj) , " field "
@@ -643,7 +656,7 @@ int ARecSetFromDict(Tcl_Interp *ip
 	}
 
 	for ( i = 0; i < elemc; i += 2 ) {
-	    if ( ARecSetField(ARecLookupField(type->field, elemv[i+0]), recs, elemv[i+1]) == TCL_ERROR ) {
+	    if ( ARecSetField(ARecLookupField(type->nfield, type->field, elemv[i+0]), recs, elemv[i+1]) == TCL_ERROR ) {
 		Tcl_AppendStringsToObj(result
 			, Tcl_GetString(type->nameobj)
 			, " cannot set field "
@@ -776,24 +789,20 @@ typedef struct _DblAlign {
 
 void ARecDTypeAddType(ARecInst *dtypes, Tcl_Obj *nameobj, int size, int align, void *xxx, ARecSetFunc set, ARecGetFunc get)
 {
-    printf("Here	%p\n", dtypes);
-    ARecRealloc(dtypes, dtypes->nrecs++, 10);
-
-
-
-    printf("This	%p\n", dtypes->recs);
+    ARecRealloc(dtypes, ++dtypes->nrecs, 10);
 
     ARecDType *newtype = &((ARecDType *)(dtypes->recs))[dtypes->nrecs-1];
 
     newtype->nameobj = nameobj;
     Tcl_IncrRefCount(newtype->nameobj);
 
-    printf("Here\n");
-
     newtype->size  = size;
     newtype->align = align;
     newtype->set   = set;
     newtype->get   = get;
+
+    newtype->shadow = (ARecDType *) Tcl_Alloc(sizeof(ARecDType));
+    memcpy(newtype->shadow, newtype, sizeof(ARecDType));
 }
 
 void ARecInit(Tcl_Interp *ip) {
@@ -802,20 +811,17 @@ void ARecInit(Tcl_Interp *ip) {
 
     Tcl_Obj *tclobjString = Tcl_NewStringObj("string", -1);
     Tcl_Obj *tclobjLong   = Tcl_NewStringObj("long", -1);
+    Tcl_Obj *tclobjTclObj = Tcl_NewStringObj("tclobj*",-1);
 
     int dalign = sizeof(DblAlign) - sizeof(double);
     int lalign = sizeof(LngAlign) - sizeof(long);
 
-    ARecDTypeInst = ARecTypeCreate(ip, Tcl_NewStringObj("::arec::dtype", -1));
-    ARecDTypeType = ARecTypeCreate(ip, Tcl_NewStringObj("::arec::dtypes", -1));
-
+    ARecDTypeType = ARecTypeCreate(ip, Tcl_NewStringObj("::arec::dtype", -1));
     ARecDTypeType->size = sizeof(ARecType);
 
-    printf("Here\n");
+    ARecDTypeInst = ARecInstCreate(ip, Tcl_NewStringObj("::arec::dtypes", -1), ARecDTypeType, 0);
 
     ARecDTypeAddType(ARecDTypeInst, Tcl_NewStringObj("char",   -1), sizeof(char)	  , 1,      NULL, ARecSetChar,	 ARecGetChar   );
-    printf("THere\n");
-
     ARecDTypeAddType(ARecDTypeInst, Tcl_NewStringObj("uchar",  -1), sizeof(unsigned char) , 1,      NULL, ARecSetUChar,	 ARecGetUChar  );
     ARecDTypeAddType(ARecDTypeInst, Tcl_NewStringObj("short",  -1), sizeof(short)	  , 2,      NULL, ARecSetShort,	 ARecGetShort  );
     ARecDTypeAddType(ARecDTypeInst, Tcl_NewStringObj("ushort", -1), sizeof(unsigned short), 2,      NULL, ARecSetUShort, ARecGetUShort );
@@ -824,11 +830,16 @@ void ARecInit(Tcl_Interp *ip) {
     ARecDTypeAddType(ARecDTypeInst, Tcl_NewStringObj("float",  -1), sizeof(float)	  , 4,      NULL, ARecSetFloat,	 ARecGetFloat  );
     ARecDTypeAddType(ARecDTypeInst, Tcl_NewStringObj("double", -1), sizeof(double)	  , dalign, NULL, ARecSetDouble, ARecGetDouble );
     ARecDTypeAddType(ARecDTypeInst, tclobjString,	            sizeof(char *)	  , 4,      NULL, ARecSetString, ARecGetString );
+    ARecDTypeAddType(ARecDTypeInst, tclobjTclObj,		    sizeof(Tcl_Obj *)	  , 4,      NULL, NULL         , ARecGetTclObj );
 
-    ARecTypeAddField1(ARecDTypeType, Tcl_NewStringObj("name",  -1), ARecLookupDType(tclobjString));
+    ARecDTypeType->size = 0;
+
+    ARecTypeAddField1(ARecDTypeType, Tcl_NewStringObj("name",  -1), ARecLookupDType(tclobjTclObj));
     ARecTypeAddField1(ARecDTypeType, Tcl_NewStringObj("size",  -1), ARecLookupDType(tclobjLong));
     ARecTypeAddField1(ARecDTypeType, Tcl_NewStringObj("align", -1), ARecLookupDType(tclobjLong));
-
-
+    ARecTypeAddField1(ARecDTypeType, Tcl_NewStringObj("type",  -1), ARecLookupDType(tclobjLong));
+    ARecTypeAddField1(ARecDTypeType, Tcl_NewStringObj("set",   -1), ARecLookupDType(tclobjLong));
+    ARecTypeAddField1(ARecDTypeType, Tcl_NewStringObj("get",   -1), ARecLookupDType(tclobjLong));
+    ARecTypeAddField1(ARecDTypeType, Tcl_NewStringObj("shadow",-1), ARecLookupDType(tclobjLong));
 }
 
