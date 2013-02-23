@@ -13,8 +13,6 @@ namespace eval arec {
 	lappend  ::arec::types [set ::arec::type [::arec::add_type $type]]
 
 	eval $body
-
-	proc ::arec::$type args [list ::$::arec::type add-struct {*}\$args]
     }
 
     proc char   { args } { ::$::arec::type add-field char   {*}$args }
@@ -26,6 +24,7 @@ namespace eval arec {
     proc float  { args } { ::$::arec::type add-field float  {*}$args }
     proc double { args } { ::$::arec::type add-field double {*}$args }
     proc string { args } { ::$::arec::type add-field string {*}$args }
+    proc char*  { args } { ::$::arec::type add-field string {*}$args }
 
     critcl::ccode {
 	#include "arec.h"

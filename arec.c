@@ -42,7 +42,12 @@ int ARecSetFloat( ARecField *type, Tcl_Obj *obj, void *here) {
     return TCL_OK;
 }
 int ARecSetLong(  ARecField *type, Tcl_Obj *obj, void *here) { return Tcl_GetLongFromObj(  NULL, obj, (long   *) here); }
-int ARecSetInt(   ARecField *type, Tcl_Obj *obj, void *here) { return Tcl_GetIntFromObj(   NULL, obj, (int    *) here); }
+int ARecSetInt(   ARecField *type, Tcl_Obj *obj, void *here) {
+    double value;
+
+    return Tcl_GetDoubleFromObj(   NULL, obj, (int    *) &value);
+    *((int    *) here) = (int) value;
+}
 int ARecSetUShort(ARecField *type, Tcl_Obj *obj, void *here) {
     	int i;
 
@@ -78,7 +83,7 @@ int ARecSetChar(ARecField *type, Tcl_Obj *obj, void *here) {
 int ARecSetString(ARecField *type, Tcl_Obj *obj, void *here) {
     	char *str = *((char **)here);
 
-    if ( str ) { free((void *) str); }
+    if ( str ) {  free((void *) str); }
 
     *(char **) here = strdup(Tcl_GetString(obj));
 
@@ -160,20 +165,17 @@ int ARecTypeObjCmd(data, ip, objc, objv)
     ARecCmd(ip, type, "create", " ?inst? ...", objc >= 3, objc, objv,
 	return ARecNewInst(ip, objc, objv, data);
     );
-    ARecCmd(ip, type, "types", " ?field? ...", objc >= 2, objc, objv,
-	return ARecTypeFields(ip, type, 1, 0);
-    );
-    ARecCmd(ip, type, "names", " ?field? ...", objc >= 2, objc, objv,
-	return ARecTypeFields(ip, type, 0, 1);
-    );
-    ARecCmd(ip, type, "fields", " ?field? ...", objc >= 2, objc, objv,
-	return ARecTypeFields(ip, type, 1, 1);
-    );
     ARecCmd(ip, type, "size", "", objc >= 1, objc, objv,
 	Tcl_SetObjResult(ip, Tcl_NewIntObj(type->size));	
 
 	return TCL_OK;
     );
+
+    ARecCmd(ip, type, "types",   " ?field? ...", objc >= 2, objc, objv, return ARecTypeFields(ip, type, 1, 0, 0););
+    ARecCmd(ip, type, "names",   " ?field? ...", objc >= 2, objc, objv, return ARecTypeFields(ip, type, 0, 1, 0););
+    ARecCmd(ip, type, "fields",  " ?field? ...", objc >= 2, objc, objv, return ARecTypeFields(ip, type, 1, 1, 0););
+    ARecCmd(ip, type, "offsets", " ?field? ...", objc >= 2, objc, objv, return ARecTypeFields(ip, type, 1, 1, 1););
+
     ARecCmd(ip, type, "add-field", " type name", objc >= 4, objc, objv,
 	return ARecTypeAddField(ip, type, objc, objv);
     );
@@ -260,16 +262,13 @@ int ARecInstObjCmd(data, ip, objc, objv)
 	char index[50];
 	sprintf(index, "%d %d", n, m);
 
-	    printf("alloc? %d %d\n", n+m-1, inst->nrecs);
-
 	Tcl_AppendStringsToObj(result, Tcl_GetString(inst->type->nameobj), " index out of range ", index, NULL);
 
 	return TCL_ERROR;
     }
 
     ARecCmd(ip, inst, "set", " field value ...", objc >= 3, objc, objv,
-
-	if ( n+m-1 == inst->nrecs ) { ARecRealloc(inst, n+m, 10); }
+	ARecRealloc(inst, n+m, 10);
 
 	recs = inst->recs + n * inst->type->size;
 
@@ -277,14 +276,14 @@ int ARecInstObjCmd(data, ip, objc, objv)
     );
 
     ARecCmd(ip, inst, "setdict", " field value ...", objc >= 3, objc, objv,
-	if ( n+m-1 == inst->nrecs ) { ARecRealloc(inst, n+m, 10); }
+	ARecRealloc(inst, n+m, 10);
 
 	recs = inst->recs + n * inst->type->size;
 
 	return ARecSetFromDict(ip, inst->type, recs, m, objc-2, objv+2);
     );
     ARecCmd(ip, inst, "setlist", " field value ...", objc >= 3, objc, objv,
-	if ( n+m-1 == inst->nrecs ) { ARecRealloc(inst, n+m, 10); }
+	ARecRealloc(inst, n+m, 10);
 
 	recs = inst->recs + n * inst->type->size;
 
@@ -378,7 +377,7 @@ int ARecNewInst(Tcl_Interp *ip, int objc, Tcl_Obj **objv, ARecType *type)
     return TCL_OK;
 }
 
-int ARecTypeFields(Tcl_Interp *ip, ARecType *type, int types, int fields)
+int ARecTypeFields(Tcl_Interp *ip, ARecType *type, int types, int fields, int offset)
 {
     Tcl_Obj  	 *result = Tcl_NewObj();
     int i;
@@ -386,6 +385,7 @@ int ARecTypeFields(Tcl_Interp *ip, ARecType *type, int types, int fields)
     for ( i = 0; i < type->nfield; i++ ) {
 	if ( types  ) { Tcl_ListObjAppendElement(ip, result , type->field[i].dtype->nameobj); }
 	if ( fields ) { Tcl_ListObjAppendElement(ip, result,  type->field[i].nameobj);        }
+	if ( offset ) { Tcl_ListObjAppendElement(ip, result,  Tcl_NewIntObj(type->field[i].offset)); }
     }
 
     Tcl_SetObjResult(ip, result);
@@ -560,12 +560,12 @@ int ARecIndex(ARecInst *inst, Tcl_Obj *result, int *objc, Tcl_Obj ***objv, int *
 
 ARecRealloc(ARecInst *inst, int nrecs, int more) 
 {
-    if ( nrecs >  inst->arecs ) {
+    if ( nrecs >=  inst->arecs ) {
 	inst->arecs = nrecs + more;
 
 	inst->recs = Tcl_Realloc((char *) inst->recs, inst->arecs * inst->type->size);
 
-	memset(&((char *)inst->recs)[inst->nrecs * inst->type->size], 0, inst->type->size * more);
+	memset(&((char *)inst->recs)[inst->nrecs * inst->type->size], 0, inst->type->size * ((nrecs - inst->nrecs) + more));
     }
     inst->nrecs = nrecs;
 }

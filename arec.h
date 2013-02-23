@@ -3,9 +3,6 @@
 
 #define ARecPadd(offset, align) ((offset + align - 1) & ~(align - 1))
 
-#define ARecOff(p_type,field) \
-            ((int) (((char *) (&(((p_type)NULL)->field))) - ((char *) NULL)))
-
 #define ARecCmd(interp, inst, name, args, expr, objc, objv, code)	\
     if ( objc == 1 )							\
     	    Tcl_AppendStringsToObj(result, "	",  Tcl_GetString(inst->nameobj), " ", name, " ", args, "\n", NULL); \
