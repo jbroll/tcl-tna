@@ -260,11 +260,11 @@ int ARecInstObjCmd(data, ip, objc, objv)
 	return TCL_ERROR;
     }
 
-    if ( n+m-1 < 0 || n+m-1 > inst->nrecs )  {
+    if ( n < 0 || n+m-1 > inst->nrecs )  {
 	char index[50];
-	sprintf(index, "%d %d", n, m);
+	sprintf(index, "%d %d : %d", n, m, inst->nrecs);
 
-	Tcl_AppendStringsToObj(result, Tcl_GetString(inst->type->nameobj), " index out of range ", index, NULL);
+	Tcl_AppendStringsToObj(result, Tcl_GetString(inst->nameobj), " : index out of range ", index, NULL);
 
 	return TCL_ERROR;
     }
@@ -538,6 +538,7 @@ int ARecIndex(ARecInst *inst, Tcl_Obj *result, int *objc, Tcl_Obj ***objv, int *
 
 	if ( !strncmp(end, "end", 3) ) {
 	    *n = inst->nrecs - 1;
+
 	    if ( end[3] ) {
 		*n += strtol(&end[3], &here, 10);
 	    }
@@ -569,7 +570,7 @@ ARecRealloc(ARecInst *inst, int nrecs, int more)
 
 	memset(&((char *)inst->recs)[inst->nrecs * inst->type->size], 0, inst->type->size * ((nrecs - inst->nrecs) + more));
     }
-    inst->nrecs = nrecs;
+    inst->nrecs = Max(nrecs, inst->nrecs);
 }
 
 int ARecRange(Tcl_Interp *ip, ARecInst *inst, int *objc, Tcl_Obj ***objv, int *n, int *m)
