@@ -45,8 +45,10 @@ int ARecSetLong(  ARecField *type, Tcl_Obj *obj, void *here) { return Tcl_GetLon
 int ARecSetInt(   ARecField *type, Tcl_Obj *obj, void *here) {
     double value;
 
-    return Tcl_GetDoubleFromObj(   NULL, obj, (int    *) &value);
+    int ret = Tcl_GetDoubleFromObj(NULL, obj, &value);
     *((int    *) here) = (int) value;
+
+    return ret;
 }
 int ARecSetUShort(ARecField *type, Tcl_Obj *obj, void *here) {
     	int i;
