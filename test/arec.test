@@ -15,20 +15,19 @@ proc iota { fr to { in 1 } } {
 
 ::tcltest::configure -testdir [file dirname [file normalize [info script]]] -singleproc 1 
 
-::tcltest::test rec-dtype-size { dtype size      } -body { arec::dtype size } 		  -result 28
+::tcltest::test rec-dtype-size { dtype size      } -body { arec::type  size   }		  -result 40
+::tcltest::test rec-dtype-types { dtype types    } -body { arec::type types   }  	  -result {tclobj* long long long long long long long long long}
+::tcltest::test rec-dtype-types { dtype types    } -body { arec::type names   }  	  -result {name size align nfield afield fields set get shadow inst}
+::tcltest::test rec-dtype-types { dtype types    } -body { arec::type fields  }  	  -result {tclobj* name long size long align long nfield long afield long fields long set long get long shadow long inst}
 
-::tcltest::test rec-dtype-types { dtype types    } -body { arec::dtype types  } 	  -result {tclobj* long long long long long long}
-::tcltest::test rec-dtype-names { dtype names    } -body { arec::dtype names  } 	  -result {name size align type set get shadow}
-::tcltest::test rec-dtype-field { dtype fields   } -body { arec::dtype fields } 	  -result {tclobj* name long size long align long type long set long get long shadow}
+::tcltest::test rec-dtype-size     { dtype size     } -body { arec::types length } 	  		   -result 10
+::tcltest::test rec-dtype-types    { dtype types    } -body { arec::types 0 end get name  }  		   -result {char uchar short ushort int long float double string tclobj*}
+::tcltest::test rec-dtypes-get     { dtypes get     } -body { arec::types 0 end get     name size align } -result {{char 1 1} {uchar 1 1} {short 2 2} {ushort 2 2} {int 4 4} {long 4 4} {float 4 4} {double 8 4} {string 4 4} {tclobj* 4 4}}
+::tcltest::test rec-dtypes-getlist { dtypes getlist } -body { arec::types 0 end getlist name size align } -result {{char 1 1} {uchar 1 1} {short 2 2} {ushort 2 2} {int 4 4} {long 4 4} {float 4 4} {double 8 4} {string 4 4} {tclobj* 4 4}}
+::tcltest::test rec-dtypes-getdict { dtypes getdict } -body { arec::types 0 end getdict name size align } -result {{name char size 1 align 1} {name uchar size 1 align 1} {name short size 2 align 2} {name ushort size 2 align 2} {name int size 4 align 4} {name long size 4 align 4} {name float size 4 align 4} {name double size 8 align 4} {name string size 4 align 4} {name tclobj* size 4 align 4}}
 
 
-::tcltest::test rec-dtypes-length  { dtypes length  } -body { arec::dtypes length }        -result 10
-::tcltest::test rec-dtypes-get     { dtypes get     } -body { arec::dtypes 0 end get     name size align } -result {{char 1 1} {uchar 1 1} {short 2 2} {ushort 2 2} {int 4 4} {long 4 4} {float 4 4} {double 8 4} {string 4 4} {tclobj* 4 4}}
-::tcltest::test rec-dtypes-getlist { dtypes getlist } -body { arec::dtypes 0 end getlist name size align } -result {{char 1 1} {uchar 1 1} {short 2 2} {ushort 2 2} {int 4 4} {long 4 4} {float 4 4} {double 8 4} {string 4 4} {tclobj* 4 4}}
-::tcltest::test rec-dtypes-getdict { dtypes getdict } -body { arec::dtypes 0 end getdict name size align } -result {{name char size 1 align 1} {name uchar size 1 align 1} {name short size 2 align 2} {name ushort size 2 align 2} {name int size 4 align 4} {name long size 4 align 4} {name float size 4 align 4} {name double size 8 align 4} {name string size 4 align 4} {name tclobj* size 4 align 4}}
-
-
-foreach type [arec::dtypes 0 end get name] reply { 1 1 1 1 1 1 1.0 1.0 1 } {
+foreach type [arec::types 0 end get name] reply { 1 1 1 1 1 1 1.0 1.0 1 } {
     if { $type eq "tclobj*" } { continue }
 
     ::tcltest::test rec-$type "each type: $type" -body {
@@ -40,6 +39,7 @@ foreach type [arec::dtypes 0 end get name] reply { 1 1 1 1 1 1 1.0 1.0 1 } {
     } -cleanup { rename blink {}; rename blonk {}
     } -result $reply
 }
+
 
 
 foreach i { 0 1 2 3 4 5 6 7 8 9 0 } {
@@ -149,3 +149,21 @@ foreach i { 0 1 2 3 4 5 6 7 8 9 0 } {
     }
 } -cleanup { rename blonk {}
 } -result {}
+
+::tcltest::test setlist { selist-1 } -body {
+    arec::typedef blink {
+	double a
+	int    b
+	double c
+    }
+
+    blink create blonk 5
+    lappend reply [blonk 1 get a]
+    lappend reply [blonk 1 get a b]
+    lappend reply [blonk 1 2 get a]
+    lappend reply [blonk 1 2 get a b]
+
+    set reply
+} -cleanup { rename blonk {}
+} -result {0.0 {{0.0 0}} {0.0 0.0} {{0.0 0} {0.0 0}}}
+

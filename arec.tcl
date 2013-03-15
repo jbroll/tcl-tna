@@ -7,12 +7,12 @@ namespace eval arec {
     variable types {}
     variable type  {}
 
-    proc types {} { return $::arec::types }
-
     proc typedef { type body } {
 	lappend  ::arec::types [set ::arec::type [::arec::add_type $type]]
 
-	eval $body
+	eval [::string map { , { } } $body]
+
+	proc $type { args } [subst { ::\$::arec::type add-field $type {*}\$args}]
     }
 
     proc char   { args } { ::$::arec::type add-field char   {*}$args }
@@ -29,8 +29,8 @@ namespace eval arec {
     critcl::ccode {
 	#include "arec.h"
 
-	extern ARecInst ARecDTypesInst;
-	extern ARecType ARecDTypesType;
+	extern ARecInst ARecTypesInst;
+	extern ARecType ARecTypesType;
 	extern int ARecInstObjCmd();
 	extern int ARecDelInst();
     }

@@ -44,29 +44,26 @@
 typedef struct _ARecField {
     Tcl_Obj		*nameobj;
     int	 	 	 offset;
-    struct _ARecDType	*dtype;
+    struct _ARecType	*type;
 } ARecField;
 
 typedef int  (*ARecSetFunc)(struct _ARecField *type, Tcl_Obj *, void *);
 typedef Tcl_Obj*  (*ARecGetFunc)(struct _ARecField *type, void *);
 
-typedef struct _ARecDType {
+typedef struct _ARecType {
     Tcl_Obj	*nameobj;
     int		 size;
     int		 align;
-    struct _ARecField *type;
-    int		(*set)(struct _ARecField *type, Tcl_Obj *, void *);
-    Tcl_Obj*	(*get)(struct _ARecField *type, void *);
-    struct _ARecDType *shadow;
-} ARecDType;
 
-typedef struct _ARecType {
-    Tcl_Obj	     	*nameobj;
-    int		     	 size;
-    int		    	 nfield;
-    int		    	 afield;
-    ARecField       	*field;
-    struct _ARecInst    *instances;
+    int		 nfield;
+    int		 afield;
+    ARecField   *field;
+
+    int		(*set)(struct _ARecType *type, Tcl_Obj *, void *);
+    Tcl_Obj*	(*get)(struct _ARecType *type, void *);
+
+    struct _ARecType *shadow;
+    struct _ARecInst *instances;
 } ARecType;
 
 typedef struct _ARecInst {
@@ -86,26 +83,13 @@ int ARecSetFloat( ARecField *type, Tcl_Obj *obj, void *here);
 int ARecSetInt(   ARecField *type, Tcl_Obj *obj, void *here);
 
 int ARecNewInst(Tcl_Interp *interp, int objc, Tcl_Obj **objv, ARecType *type);
-int ARecSetFromArgs(Tcl_Interp *interp
-		     , ARecType *type
-		     , char *recs
-		     , int n
-		     , int objc
-		     , Tcl_Obj **objv);
-int ARecSetFromList(Tcl_Interp *interp
-		     , ARecType *type
-		     , char *recs
-		     , int n
-		     , int objc
-		     , Tcl_Obj **objv);
-int ARecSetFromDict(Tcl_Interp *interp
-		     , ARecType *type
-		     , char *recs
-		     , int n
-		     , int objc
-		     , Tcl_Obj **objv);
+int ARecSetFromArgs(Tcl_Interp *interp , ARecType *type , char *recs , int n , int objc , Tcl_Obj **objv, int islist);
+int ARecSetFromList(Tcl_Interp *interp , ARecType *type , char *recs , int n , int objc , Tcl_Obj **objv, int islist);
+int ARecSetFromDict(Tcl_Interp *interp , ARecType *type , char *recs , int n , int objc , Tcl_Obj **objv, int islist);
 
-ARecDType *ARecLookupDType(Tcl_Obj *nameobj);
+void ARecTypeAddType(ARecInst *types, Tcl_Obj *nameobj, int size, int align, void *xxx, ARecSetFunc set, ARecGetFunc get);
+
+ARecType *ARecLookupType(Tcl_Obj *nameobj);
 
 typedef char *string;
 
