@@ -4,15 +4,14 @@ critcl::csources arec.c
 critcl::tsources arec.tcl
 
 namespace eval arec {
-    variable types {}
     variable type  {}
 
     proc typedef { type body } {
-	lappend  ::arec::types [set ::arec::type [::arec::add_type $type]]
+	set ::arec::type [::arec::add_type $type]
 
 	eval [::string map { , { } } $body]
 
-	proc $type { args } [subst { ::\$::arec::type add-field $type {*}\$args}]
+	proc [namespace tail $type] { args } [subst { ::\$::arec::type add-field $type {*}\$args}]
     }
 
     proc char   { args } { ::$::arec::type add-field char   {*}$args }

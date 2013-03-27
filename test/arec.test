@@ -20,6 +20,7 @@ proc iota { fr to { in 1 } } {
 ::tcltest::test rec-dtype-types { dtype types    } -body { arec::type names   }  	  -result {name size align nfield afield fields set get shadow inst}
 ::tcltest::test rec-dtype-types { dtype types    } -body { arec::type fields  }  	  -result {tclobj* name long size long align long nfield long afield long fields long set long get long shadow long inst}
 
+
 ::tcltest::test rec-dtype-size     { dtype size     } -body { arec::types length } 	  		   -result 10
 ::tcltest::test rec-dtype-types    { dtype types    } -body { arec::types 0 end get name  }  		   -result {char uchar short ushort int long float double string tclobj*}
 ::tcltest::test rec-dtypes-get     { dtypes get     } -body { arec::types 0 end get     name size align } -result {{char 1 1} {uchar 1 1} {short 2 2} {ushort 2 2} {int 4 4} {long 4 4} {float 4 4} {double 8 4} {string 4 4} {tclobj* 4 4}}
@@ -165,5 +166,5 @@ foreach i { 0 1 2 3 4 5 6 7 8 9 0 } {
 
     set reply
 } -cleanup { rename blonk {}
-} -result {0.0 {{0.0 0}} {0.0 0.0} {{0.0 0} {0.0 0}}}
+} -result {0.0 {0.0 0} {0.0 0.0} {{0.0 0} {0.0 0}}}
 
