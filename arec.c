@@ -616,9 +616,10 @@ int ARecSetFromArgs(Tcl_Interp *ip, ARecType *type, char *recs, int n, int objc,
 		return TCL_ERROR;
 	    }
 	    if ( ARecSetField(ip, field, recs, objv[i+1]) == TCL_ERROR ) {
-		Tcl_AppendStringsToObj(result , Tcl_GetString(type->nameobj) , " cannot set field "
-			, Tcl_GetString(objv[i+0]), " from "
+		Tcl_AppendStringsToObj(result , Tcl_GetString(type->nameobj) , " cannot set field \""
+			, Tcl_GetString(objv[i+0]), "\" from \""
 			, Tcl_GetString(objv[i+1])
+			, Tcl_GetString(objv[i+0]), "\""
 			, NULL);
 		return TCL_ERROR;
 	    }
