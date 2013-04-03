@@ -28,8 +28,8 @@ namespace eval arec {
     critcl::ccode {
 	#include "arec.h"
 
-	extern ARecInst ARecTypesInst;
-	extern ARecType ARecTypesType;
+	extern ARecField ARecTypesInst;
+	extern ARecType  ARecTypesType;
 	extern int ARecInstObjCmd();
 	extern int ARecDelInst();
     }
