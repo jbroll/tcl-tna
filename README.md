@@ -34,7 +34,7 @@ Commands to create arrays and values:
 
  * tna::value
 
- Commands to execute expressions:
+Commands to execute expressions:
 
  * tna::expr	- Compile and execute a tna expression
  * tna::compile - Compile a tna expression, return a list of register, code pairs.
