@@ -141,7 +141,7 @@ namespace eval tna {
 	    printf("	%p\n", r->offs[i]);
 	}
 
-	void slice_val(Register *r, int type, void *value) 
+	void slice_val(Register *r, int type, void *value) 	// Initialize a register to access a value
 	{
 		int i;
 
@@ -159,7 +159,7 @@ namespace eval tna {
 	    r->offs[i] = value;
 	}
 
-	void slice_reg(Register *r, int type)
+	void slice_reg(Register *r, int type)			// Initialize a register as a temperary
 	{
 	    slice_val(r, type, malloc(RLEN * 8));
 
@@ -170,7 +170,7 @@ namespace eval tna {
 	    r->axis[0].step = 1;
 	}
 
-	void slice_off(Register *r, int d, int x) {
+	void slice_off(Register *r, int d, int x) {		// Initialize a register as a slice of an array.
 	    if ( r->axis[d].size == -(d+1) ) {
 		switch ( r->type ) {				// Slice index access from a typed Value register.
 		    $::tna::TypeCases

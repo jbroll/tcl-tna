@@ -6,7 +6,6 @@ oo::class create tna::thing {
 
     set indxDefault XYZ
 
-
     method list-helper { bytes dims offs } {
 
 	set d [lindex $dims 0]
@@ -56,6 +55,7 @@ oo::class create tna::thing {
 
 oo::class create tna::array {
     superclass tna::thing
+    export varname
 
     variable type dims data size drep offs indx edge indxDefault edgeDefault offsDefault
     accessor type dims data size drep offs indx
@@ -174,7 +174,6 @@ oo::class create tna::array {
 	return $list
     }
 }
-oo::objdefine tna::array export varname
 
 oo::class create tna::value {
     variable type dims data size drep offs

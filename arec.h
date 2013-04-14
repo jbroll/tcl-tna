@@ -4,6 +4,9 @@
 #define	AREC_ISLIST	1
 #define AREC_ASDICT	2
 
+#define AREC_STRUCT	3
+#define AREC_UNION	4
+
 #define ARecPadd(offset, align) ((offset + align - 1) & ~(align - 1))
 
 #define ARecCmd(interp, inst, name, args, expr, objc, objv, code)	\
@@ -54,6 +57,7 @@ typedef struct _ARecType {
     Tcl_Obj		*nameobj;
     int		  	 size;
     int		 	 align;
+    int		 	 stype;
 
     int		 	nfield;
     int		 	afield;
@@ -88,7 +92,7 @@ int ARecSetFromArgs(Tcl_Interp *interp, ARecType *type, char *recs, int m, int o
 int ARecSetFromList(Tcl_Interp *interp, ARecType *type, char *recs, int m, int objc, Tcl_Obj **objv, int flags);
 int ARecSetFromDict(Tcl_Interp *interp, ARecType *type, char *recs, int m, int objc, Tcl_Obj **objv, int flags);
 
-ARecType *ARecTypeAddType(ARecField *types, Tcl_Obj *nameobj, int size, int align, ARecSetFunc set, ARecGetFunc get);
+ARecType *ARecTypeAddType(ARecField *types, Tcl_Obj *nameobj, int size, int align, int stype, ARecSetFunc set, ARecGetFunc get);
 
 Tcl_Obj *ARecGetStruct(Tcl_Interp *ip, ARecType *type, void *recs, int m, int objc, Tcl_Obj **objv, int flags);
 

@@ -15,10 +15,10 @@ proc iota { fr to { in 1 } } {
 
 ::tcltest::configure -testdir [file dirname [file normalize [info script]]] -singleproc 1 
 
-::tcltest::test rec-dtype-size { dtype size      } -body { arec::type  size   }		  -result 40
-::tcltest::test rec-dtype-types { dtype types    } -body { arec::type types   }  	  -result {tclobj* long long long long long long long long long}
-::tcltest::test rec-dtype-types { dtype types    } -body { arec::type names   }  	  -result {name size align nfield afield fields set get shadow inst}
-::tcltest::test rec-dtype-types { dtype types    } -body { arec::type fields  }  	  -result {tclobj* name long size long align long nfield long afield long fields long set long get long shadow long inst}
+::tcltest::test rec-dtype-size  { dtype size     } -body { arec::type  size   }		  -result 44
+::tcltest::test rec-dtype-types { dtype types    } -body { arec::type types   }  	  -result {tclobj* long long long long long long long long long long}
+::tcltest::test rec-dtype-types { dtype types    } -body { arec::type names   }  	  -result {name size align stype nfield afield fields set get shadow inst}
+::tcltest::test rec-dtype-types { dtype types    } -body { arec::type fields  }  	  -result {tclobj* name long size long align long stype long nfield long afield long fields long set long get long shadow long inst}
 
 
 ::tcltest::test rec-dtype-size     { dtype size     } -body { arec::types length } 	  		   -result 10
@@ -42,7 +42,6 @@ foreach type [arec::types 0 end get name] reply { 1 1 1 1 1 1 1.0 1.0 1 } {
 }
 
 
-
 foreach i { 0 1 2 3 4 5 6 7 8 9 0 } {
     ::tcltest::test rec-$i { create type } -body {
 	arec::typedef blink {
@@ -64,6 +63,7 @@ foreach i { 0 1 2 3 4 5 6 7 8 9 0 } {
     } -cleanup { rename blonk {}
     } -result {{6 4 3.3} {4 4 3.3} {4 4 3.3} {4 4 5.5}}
 }
+
 
 
 ::tcltest::test length { length+1 } -body {
@@ -167,4 +167,19 @@ foreach i { 0 1 2 3 4 5 6 7 8 9 0 } {
     set reply
 } -cleanup { rename blonk {}
 } -result {0.0 {0.0 0} {0.0 0.0} {{0.0 0} {0.0 0}}}
+
+::tcltest::test union { union-1 } -body {
+    arec::typedef union blink {
+	double a
+	int    b
+	double c
+    }
+
+    blink create blonk 1
+
+    blonk 0 set a 4.5
+    blonk 0 get a
+
+} -cleanup { rename blonk {}
+} -result {4.5}
 
