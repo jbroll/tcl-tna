@@ -43,7 +43,7 @@ Commands to execute expressions:
 
 Examples:
 
-package require tna
+    package require tna
 
     tna::array create A double 512 512
     tna::array create B double 512 512
