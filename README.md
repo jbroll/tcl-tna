@@ -45,6 +45,13 @@ Examples:
 
 package require tna
 
-tna::array create A double 512 512
-tna::array create B double 512 512
+    tna::array create A double 512 512
+    tna::array create B double 512 512
+    tna::array create C double 512 512
+
+    tna::expr { A = 1
+		B = 4
+		    
+		C = A * B 
+    }
 

@@ -17,7 +17,7 @@ $(tna32): tna.h tna.critcl tna-tcl.tcl expression.tcl functional.tcl tcloo.tcl
 $(tna64): tna.h tna.critcl tna-tcl.tcl expression.tcl functional.tcl tcloo.tcl
 	unsource tna.critcl > tna.tcl
 	critcl -target macosx-x86_64 -force -pkg tna 
-	#rm tna.tcl
+	rm tna.tcl
 
 $(nproc32): nproc.tcl
 	critcl -target macosx-x86_32 -force -pkg nproc 

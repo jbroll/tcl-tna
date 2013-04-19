@@ -716,5 +716,3 @@ namespace eval tna {
 	return $listing
     }
 }
-
-

@@ -4,10 +4,6 @@
 rays 2 3 set 1 2 p { 4 2 }
 
 
-
-
-
-
 AREC
 
 typedef A {
@@ -56,7 +52,6 @@ Broadcast checking
 	any
 
 
-
 Reverse slices
     Assignment alias detection
       see if target is present in expression
@@ -80,8 +75,6 @@ Move parts of execute into compile
 
 Move threaded register allocation into threads.
 
-
-
 #
 # Index registers:
 #
@@ -91,7 +84,3 @@ Move threaded register allocation into threads.
 # may be used as any other scalers are.
 #
 # 
-
-
-
-

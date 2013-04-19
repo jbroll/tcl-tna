@@ -57,6 +57,3 @@ typedef struct _OpTable {
     OpFunc     *func;
     const char *name;
 } OpTable;
-
-
-
