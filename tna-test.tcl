@@ -3,7 +3,7 @@
 
 package require tcltest
 
-lappend auto_path lib ../lib
+lappend auto_path lib ../lib arec/lib ../arec/lib
 
 package require tna
 package require arec

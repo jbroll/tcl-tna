@@ -85,7 +85,7 @@ namespace eval tna {
 	#include <math.h>
     }
 
-    critcl::cproc bap  { Tcl_Obj* bytes } long { return Tcl_GetByteArrayFromObj(bytes, NULL); }
+    critcl::cproc bap  { Tcl_Obj* bytes } long { return (long) Tcl_GetByteArrayFromObj(bytes, NULL); }
 
     critcl::cproc free { long data } void { free((void *) data); }
 
