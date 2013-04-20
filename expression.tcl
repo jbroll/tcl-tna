@@ -5,9 +5,7 @@
  #
  #
  namespace eval expression {
-    # This is the operator precedence table for C++.  The dot operator is effectivly
-    # commented out by "renameing" it ".###".  The lexical "analyzer" is too primitive 
-    # to destinguish floating point numbers and a real . operator usage.
+    # This is the operator precedence table for C++.
     #
     # The conditional, "?:" and sequence operator, "," are missing.
     #
