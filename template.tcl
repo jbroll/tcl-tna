@@ -1,6 +1,4 @@
 
-proc K { x y } { set x }
-
 proc shift { V } {
     upvar $V v
     K [lindex $v 0] [set v [lrange [K $v [unset v]] 1 end]]

@@ -1,5 +1,6 @@
 
-proc I { x } { return $x } 
+proc I { x   } { return $x } 
+proc K { x y } { return $x }
 
 proc iota { fr to { in 1 } } {
     set fr [expr $fr]

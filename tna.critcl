@@ -1,19 +1,39 @@
 
 package provide tna 0.5
 
-critcl::tsources tna.tcl	 			; # This file is a tcl source file for the package.
-critcl::cheaders tna.h tpool/tpool.h
+critcl::tsources tcloo.tcl tna.tcl tna-register.unsourced tna-tcl.tcl  			; # This file is a tcl source file for the package.
+critcl::cheaders tna.h tna-register.h tpool/tpool.h
 critcl::csources tpool/tpool.c
 
 critcl::cflags -O3 -DTCL_THREADS=1
 critcl::clibraries -lm
 
-source tcloo.tcl
-source template.tcl
 source functional.tcl
-source tna-tcl.tcl
+source template.tcl
 
 namespace eval tna {
+    set debug    0
+
+    set regsize 512
+
+    set  Axes { X Y Z U V }		; # The names of the axis index variables
+    set nAxes [llength $Axes]
+
+    # This array defines the types available in the package.
+    #
+    #       tnaType CType         	pType	pFmt	getType	getFunc			scan
+    set Types {
+	      char  char              	int     %d 	int	Tcl_GetIntFromObj	c
+	     uchar "unsigned char"    	int     %d 	int	Tcl_GetIntFromObj	c 
+	     short  short		int     %d 	int	Tcl_GetIntFromObj	s 
+	    ushort "unsigned short"	int     %d 	int	Tcl_GetIntFromObj	s 
+	       int  int 		int     %d 	int	Tcl_GetIntFromObj	i
+	      uint "unsigned int"	long    %u 	long	Tcl_GetLongFromObj	i 
+	      long "long"		long   %ld 	long	Tcl_GetLongFromObj	i 
+	     ulong "unsigned long"	long   %lu 	long	Tcl_GetLongFromObj	i
+	     float  float		double  %f 	double	Tcl_GetDoubleFromObj	f 
+	    double  double		double  %f 	double	Tcl_GetDoubleFromObj	d 
+    }
 
     variable IntOnly { mod band bor bxor bnot shr shl }
 
@@ -712,18 +732,4 @@ namespace eval tna {
 	return TCL_OK;
     }
 
-    if { [::critcl::compiled] } {
-	::tna::opcodesX
-	set i 0
-	foreach { tnaType CType pType pFmt getType getFunc scan } $::tna::Types {
-	    set ::tna::TypesX($tnaType) [incr i]
-
-	    set ::tna::TypesScan($tnaType) $scan
-	    if { [::tna::sizeof_long] == 8 } {
-		set  ::tna::TypesScan(long) w
-		set ::tna::TypesScan(ulong) w
-	    }
-	}
-    }
 }
-
