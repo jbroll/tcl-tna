@@ -9,8 +9,8 @@ x32: $(tna32) $(nproc32)
 
 all: arec $(tna32) $(tna64) $(nproc32) $(nproc64)
 
-TNASOURCE = tna.h tna-register.h tna-register.tcl			\
-	    tna.tcl tna-util.tcl tna-parse.tcl tna-disassemble.tcl	\
+TNASOURCE = tna.h tna-register.h tna-register.tcl tna-register.unsourced	\
+	    tna.tcl tna-util.tcl tna-parse.tcl tna-disassemble.tcl		\
 	    tna-array.tcl expression.tcl functional.tcl tcloo.tcl
 
 

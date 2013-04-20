@@ -364,9 +364,9 @@ namespace eval tna {
 
     proc exprStart {} {
 	variable regs
-	variable    X {}
-	variable text {}
-	variable nreg  0
+	variable       X {}
+	variable    text {}
+	variable    nreg  0
 	variable reglist {}
 
 	::array unset regs
