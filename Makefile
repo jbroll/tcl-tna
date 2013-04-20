@@ -7,14 +7,14 @@ nproc64	= lib/nproc/macosx-x86_64/nproc.dylib
 
 all: arec $(tna32) $(tna64) $(nproc32) $(nproc64)
 
-$(tna32): tna.h tna.critcl tna-tcl.tcl expression.tcl functional.tcl tcloo.tcl
+$(tna32): tna.h tna-register.h tna.critcl tna-tcl.tcl expression.tcl functional.tcl tcloo.tcl
 	unsource tna.critcl > tna.tcl
 	critcl -target macosx-x86_32 -force -pkg tna 
 	rm -rf lib/tna/macosx-ix86
 	mv lib/tna/macosx-x86_32 lib/tna/macosx-ix86
 	rm tna.tcl
 
-$(tna64): tna.h tna.critcl tna-tcl.tcl expression.tcl functional.tcl tcloo.tcl
+$(tna64): tna.h tna-register.h tna.critcl tna-tcl.tcl expression.tcl functional.tcl tcloo.tcl
 	unsource tna.critcl > tna.tcl
 	critcl -target macosx-x86_64 -force -pkg tna 
 	rm tna.tcl
