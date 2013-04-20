@@ -27,9 +27,9 @@ typedef union _ARecValue {
 } ARecValue;
     
 typedef struct _Register {
-    int	 	 type;		/* data type			*/
-    int		 item;
-    int		 used;
+    char 	 type;		/* data type			*/
+    char	 item;
+    char	 used;
     void*	 data;		/* pointer to data 		*/
     Tcl_Obj*	 name;
     ARecValue	 value;

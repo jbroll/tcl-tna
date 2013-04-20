@@ -1,8 +1,8 @@
 # Make some procs to allow the evaluation of "tna-register.h"
 #
 namespace eval tna {
-	proc ::typedef { struct stype body type } {
-	    arec::typedef $struct $stype [regsub -all {\[} $body { [tna::xexpr }] $type 
+	proc typedef { struct stype body type } {
+	    arec::typedef $struct $stype [regsub -all {\[} $body { [tna::xexpr }] ::tna::$type 
 	}
 	proc xexpr { args } {
 	    set args [regsub {([a-zA-Z_][a-zA-Z_0-9]*)} $args {$::\1}]

@@ -1,10 +1,7 @@
 
 #define Min(x, y) (((x) < (y)) ? (x) : (y))
 
-#define NDIM 5
-
 #include "tna-register.h"
-
 
 typedef struct _Instruct {
     short		opcode;

@@ -46,7 +46,7 @@ namespace eval tna {
 	    set reg [string range $name 1 end]
 	}
 
-	set ::tna::regs($name) [list $reg $type $regtype $name : anon $regtype {} $::tna::TypesX($type) {} {}]
+	set ::tna::regs($name) [list $reg $type $regtype $name : anon $regtype {} [set ::tna::TNA_TYPE_$type] {} {}]
 
 	return $reg
     }
@@ -87,9 +87,8 @@ namespace eval tna {
 		set name $name-$type
 	    }
 	} elseif { $name in $::tna::Axes } {
-	    set item const
-	    set type int
 	    set item vect
+	    set type int
 	    set data [::expr -([lsearch $::tna::Axes $name]+1)]
 	    set drep  vect
 	} else {
@@ -103,12 +102,15 @@ namespace eval tna {
 	    }
 	}
 
-	try { set typex $::tna::TypesX($type) 
-	} on error message { set typex 0 }
+	set typex [set ::tna::TNA_TYPE_$type]
 
-	
+
+	set reg [incr ::tna::nreg]
 	set ::tna::regs($name) 	\
-	    [list [incr ::tna::nreg] $type $item $name : $drep $data {} $typex $dims $slic]
+	    [list $reg $type $item $name : $drep $data {} $typex $dims $slic]
+
+	#variable R
+	#$R set 
     }
     proc register-type { name } { return [lindex ::tna::regs($name) 1] }
 
@@ -191,7 +193,7 @@ namespace eval tna {
 	}
 	     
 	set ::tna::regs($name) 	\
-	    [list [incr ::tna::nreg] double ivar $name : value $name {} $::tna::TypesX(double) {} {}]
+	    [list [incr ::tna::nreg] double ivar $name : value $name {} $::tna::TNA_TYPE_double {} {}]
 
 	return $name
     }
@@ -362,15 +364,24 @@ namespace eval tna {
 	exprStart
     }
 
+    variable R [tna::Register create reg 0]
+
     proc exprStart {} {
+	variable R
+
 	variable regs
 	variable       X {}
 	variable    text {}
 	variable    nreg  0
 	variable reglist {}
 
+	$R length 0
+
 	::array unset regs
-	set regs(0) [list 0 any const 0 : 0 0 {} $::tna::TypesX(int) {} {}]
+
+	set regs(0) [list 0 any const 0 : 0 0 {} $::tna::TNA_TYPE_int {} {}]
+
+	#$R 0 set type 0 i
     }
     proc exprSave {} {
 	variable Code

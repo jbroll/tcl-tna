@@ -1,7 +1,6 @@
 
 namespace eval tna {
     proc disassemble { regs text } {
-	variable TypesX
 	variable TypesR
 
 	variable OpcodesX
@@ -15,12 +14,6 @@ namespace eval tna {
 	if { ![info exists OpcodesR] } {
 	    foreach { name op } [::array get OpcodesX] {
 		set OpcodesR($op) $name
-	    }
-	}
-	if { ![info exists TypesR] } {
-	    set i 0
-	    foreach { name n } [::array get TypesX] {
-		set TypesR($n)  $name
 	    }
 	}
 
