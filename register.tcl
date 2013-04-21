@@ -18,6 +18,6 @@ namespace eval tna {
 	}
 
     xsource {
-	source tna-register.h
+	source register.h
     }
 }

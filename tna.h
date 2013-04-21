@@ -1,7 +1,7 @@
 
 #define Min(x, y) (((x) < (y)) ? (x) : (y))
 
-#include "tna-register.h"
+#include "register.h"
 
 typedef struct _Instruct {
     short		opcode;

@@ -9,9 +9,9 @@ all: arec $(tna32) $(tna64) $(nproc32) $(nproc64)
 x32:      $(tna32)          $(nproc32)
 
 
-TNASOURCE = tna.h tna-register.h tna-register.tcl tna-register.unsourced	\
-	    tna.tcl tna-util.tcl tna-parse.tcl tna-disassemble.tcl		\
-	    tna-array.tcl expression.tcl functional.tcl tcloo.tcl
+TNASOURCE = tna.h register.h register.tcl register.unsourced	\
+	    tna.tcl init.tcl parse.tcl disassemble.tcl		\
+	    array.tcl expression.tcl functional.tcl tcloo.tcl
 
 
 $(tna32): $(TNASOURCE)
@@ -30,8 +30,8 @@ $(nproc32): nproc.tcl
 $(nproc64): nproc.tcl
 	critcl -target macosx-x86_64 -force -pkg nproc 
 
-tna-register.unsourced : tna-register.tcl
-	unsource tna-register.tcl > tna-register.unsourced
+register.unsourced : register.tcl
+	unsource register.tcl > register.unsourced
 
 test: FORCE
 	cd arec; $(MAKE) test
