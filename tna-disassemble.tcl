@@ -26,24 +26,23 @@ namespace eval tna {
 	foreach r $regs {
 	    lassign $r n type item name : drep data i t dims slice
 
-	    switch $item {
-		none -
-		anox  -
-		anon  { append listing [format " %4d  %-8s %-14s  %8s\n" $n $item $name $type] }
-		vect  { append listing [format " %4d  %-8s %-14s  %8s	%d\n" $n $item $name $type $data] }
-		const { append listing [format " %4d  %-8s %-14s  %8s	%f\n" $n $item $name $type $data] }
-		tna   {
+	    switch $item \
+		$::tna::TNA_ITEM_none  -												\
+		$::tna::TNA_ITEM_anox  -												\
+		$::tna::TNA_ITEM_anon  { append listing [format " %4d  %-8s %-14s  %8s\n" $n $item $name $type] }			\
+		$::tna::TNA_ITEM_vect  { append listing [format " %4d  %-8s %-14s  %8s	%d\n" $n $item $name $type $data] }		\
+		$::tna::TNA_ITEM_const { append listing [format " %4d  %-8s %-14s  %8s	%f\n" $n $item $name $type $data] }		\
+		$::tna::TNA_ITEM_tna   {
 		    if { $drep eq "bytes" } {
 			append listing [format " %4d  %-8s %-14s  %8s	%10s : %s %s\n" $n $item $name $type bytes $dims $slice]
 		    } else {
 			append listing [format " %4d  %-8s %-14s  %8s	0x%08x : %s %s\n" $n $item $name $type $data $dims $slice]
 		    }
-		}
-		ivar -
-		ovar -
-		xvar { append listing [format " %4d  %-8s %-14s  %8s	%s\n" $n $item $name $type $data] }
+		}															\
+		$::tna::TNA_ITEM_ivar -													\
+		$::tna::TNA_ITEM_ovar -													\
+		$::tna::TNA_ITEM_xvar { append listing [format " %4d  %-8s %-14s  %8s	%s\n" $n $item $name $type $data] }		\
 		default { append listing $r "\n" }
-	    }
 	}
 	append listing	"#\n"
 	append listing	"#\n"

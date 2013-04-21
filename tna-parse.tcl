@@ -36,7 +36,11 @@ namespace eval tna {
 	}
     }
 
-    proc anonreg { type { regtype anon } } {		# Allocate a anon register
+    proc anonreg { type { regtype {} } } { 				# Allocate a anon register
+	if { $regtype eq {} } {
+	    set regtype $::tna::TNA_ITEM_anon 
+	}
+
 	if { [llength $::tna::reglist] == 0 } {
 	    set reg   [incr ::tna::nreg]
 	    set name @$reg
@@ -46,13 +50,13 @@ namespace eval tna {
 	    set reg [string range $name 1 end]
 	}
 
-	set ::tna::regs($name) [list $reg $type $regtype $name : anon $regtype {} [set ::tna::TNA_TYPE_$type] {} {}]
+	set ::tna::regs($name) [list $reg $type $regtype $name : $::tna::TNA_ITEM_anon $regtype {} $type {} {}]
 
 	return $reg
     }
     proc dispose { name } {				# Push anon register on list for reuse
 	if { [string index $name 0] eq "@"	\
-	  && [lindex $::tna::regs($name) 2] eq "anon" } {
+	  && [lindex $::tna::regs($name) 2] eq $::tna::TNA_ITEM_anon } {
 	    lappend ::tna::reglist $name
 	}
     }
@@ -61,7 +65,7 @@ namespace eval tna {
 	set slic {}
 
 	if { [info command $name] ne {} } {
-	    set item tna
+	    set item $::tna::TNA_ITEM_tna
 	    set data [$name data]
 	    set drep [$name drep]
 	    set type [$name type]
@@ -69,26 +73,26 @@ namespace eval tna {
 
 	    set slic [$name indx]
 	} elseif { [string is int    $value] } {
-	    set item const
+	    set item $::tna::TNA_ITEM_const
 	    set data $value
 	    set drep  value
 	    if { $type eq {} } {
-		set type int
+		set type $tna::TNA_TYPE_int
 	    } else {
 		set name $name-$type
 	    }
 	} elseif { [string is double $value] } {
-	    set item const
+	    set item $::tna::TNA_ITEM_const
 	    set data $value
 	    set drep  value
 	    if { $type eq {} } {
-		set type double
+		set type $tna::TNA_TYPE_double
 	    } else {
 		set name $name-$type
 	    }
 	} elseif { $name in $::tna::Axes } {
-	    set item vect
-	    set type int
+	    set item $::tna::TNA_ITEM_vect
+	    set type $::tna::TNA_TYPE_int
 	    set data [::expr -([lsearch $::tna::Axes $name]+1)]
 	    set drep  vect
 	} else {
@@ -96,18 +100,14 @@ namespace eval tna {
 		set item $item
 		set data $name
 		set drep value
-		set type double
+		set type $tna::TNA_TYPE_double
 	    } else {
 		error "cannot identify item : $name"
 	    }
 	}
 
-	set typex [set ::tna::TNA_TYPE_$type]
-
-
 	set reg [incr ::tna::nreg]
-	set ::tna::regs($name) 	\
-	    [list $reg $type $item $name : $drep $data {} $typex $dims $slic]
+	set ::tna::regs($name) 	[list $reg $type $item $name : $drep $data {} $type $dims $slic]
 
 	#variable R
 	#$R set 
@@ -117,14 +117,15 @@ namespace eval tna {
 
     proc promote { c regc typec args } {		# Promote args to common widest type, emit conversion code
 	variable text
+	variable TypesR
 
 	upvar $c C
 	upvar $regc regC
 	upvar $typec typeC
 
-	set typeC none
+	set typeC $tna::TNA_TYPE_none
 	foreach { reg type Name } $args {
-	    set typeC [lindex $tna::Types [::expr max([lsearch $::tna::Types $typeC], [lsearch $::tna::Types $type])]]
+	    set typeC [::expr max($typeC, $type)]
 	}
 
 	foreach { reg type Name } $args {
@@ -132,7 +133,7 @@ namespace eval tna {
 
 	    if { $type ne $typeC } {
 		set N [anonreg $typeC]
-		lappend text [list $::tna::OpcodesX(tna_opcode_${type}_${typeC}) $reg 0 $N]
+		lappend text [list $::tna::OpcodesX(tna_opcode_$TypesR($type)_$TypesR($typeC)) $reg 0 $N]
 		dispose $reg
 	    } else {
 		set N $reg
@@ -154,7 +155,7 @@ namespace eval tna {
 
 	lookup $name - - - -
 
-	set reg [anonreg int]
+	set reg [anonreg $tna::TNA_TYPE_int]
 
 	foreach i { 1 2 5 6 7 8 9 10 } {
 	    lset regs(@$reg) $i [lindex $regs($name) $i]
@@ -201,20 +202,21 @@ namespace eval tna {
     proc assign { op a b } {				# Emit code for assignment
 	variable regs
 	variable text
+	variable TypesR
 	
-	lookup $a regA typeA itemA - {} ovar
+	lookup $a regA typeA itemA - {} $::tna::TNA_ITEM_ovar
 	lookup $b regB typeB -     -
 
-	if { $typeA == "any" } { set typeA $typeB }
-	if { $typeB == "any" } { set typeB $typeA }
+	if { $typeA == $::tna::TNA_ITEM_any } { set typeA $typeB }
+	if { $typeB == $::tna::TNA_ITEM_any } { set typeB $typeA }
 
 	if { $b eq "X" } {						# Add X register fixup
-	    set tmp [anonreg $typeB anox]
-	    lappend text [list $::tna::OpcodesX(tna_opcode_xxx_$typeB) $regB 0 $tmp]
+	    set tmp [anonreg $typeB $tna::TNA_ITEM_anox]
+	    lappend text [list $::tna::OpcodesX(tna_opcode_xxx_$TypesR($typeB)) $regB 0 $tmp]
 	    set ::tna::X [set regB $tmp]
 	    set regB $tmp
 	}
-	if { $itemA eq "ivar" } {					# Fix up ivar (input) to be xvar
+	if { $itemA eq $::tna::TNA_ITEM_ivar } {					# Fix up ivar (input) to be xvar
 	    lset ::tna::regs($a) 2 xvar
 	}
 
@@ -224,7 +226,7 @@ namespace eval tna {
 	if { $typeA eq $typeB && [info exists regs(@[lindex $text end end])] } {
 	    lset text end end $regA						
 	} else {
-	    lappend text [list $::tna::OpcodesX(tna_opcode_${typeB}_$typeA) $regB 0 $regA]
+	    lappend text [list $::tna::OpcodesX(tna_opcode_$TypesR($typeB)_$TypesR($typeA)) $regB 0 $regA]
 	}
 
 	return $a
@@ -256,6 +258,7 @@ namespace eval tna {
 
     proc uniop { op a } {				# Emit code for unary operators
 	variable text
+	variable TypesR
 
 	lookup $a regA typeA itemA -
 
@@ -270,15 +273,15 @@ namespace eval tna {
 	 inc - dec {
 	    lookup  $incr reg1 type1 -     - $typeA
 
-	    lappend text [list $::tna::OpcodesX(tna_opcode_${typeA}_${typeA}) $regA     0 $tmp]
-	    lappend text [list $::tna::OpcodesX(tna_opcode_add_${typeA})      $regA $reg1 $regA]
+	    lappend text [list $::tna::OpcodesX(tna_opcode_$TypesR($typeA)_$TypesR($typeA)) $regA     0 $tmp]
+	    lappend text [list $::tna::OpcodesX(tna_opcode_add_$TypesR($typeA))             $regA $reg1 $regA]
 
 	    return @$tmp
 	 }
 	 uinc - udec {
 	    lookup  $incr reg1 type1 -     - $typeA
 
-	    lappend text [list $::tna::OpcodesX(tna_opcode_add_${typeA})      $regA $reg1 $regA]
+	    lappend text [list $::tna::OpcodesX(tna_opcode_add_$TypesR($typeA))      $regA $reg1 $regA]
 
 	    return $a
 	 }
@@ -315,17 +318,18 @@ namespace eval tna {
 
     proc binop { op a b } {				# Emit code for binary operators
 	variable text
+	variable TypesR
 
 	lookup $a regA typeA itemA dataA
 	lookup $b regB typeB itemB dataB
 
-	if { $typeA == "any" } { set typeA $typeB }
-	if { $typeB == "any" } { set typeB $typeA }
+	if { $typeA == $tna::TNA_ITEM_any } { set typeA $typeB }
+	if { $typeB == $tna::TNA_ITEM_any } { set typeB $typeA }
 
 	if { $a eq "X" } {					  # X register fixup
 	    if { $::tna::X eq {} } {
-		set tmp [anonreg $typeA anox]
-		lappend text [list $::tna::OpcodesX(tna_opcode_xxx_$typeA) $regA 0 $tmp]
+		set tmp [anonreg $typeA $tna::TNA_ITEM_anox]
+		lappend text [list $::tna::OpcodesX(tna_opcode_xxx_$TypesR($typeA)) $regA 0 $tmp]
 		set ::tna::X [set regA $tmp]
 	    } else {
 		set regA $::tna::X
@@ -333,15 +337,15 @@ namespace eval tna {
 	}
 	if { $b eq "X" } {					  # X register fixup
 	    if { $::tna::X eq {} } {
-		set tmp [anonreg $typeB anox]
-		lappend text [list $::tna::OpcodesX(tna_opcode_xxx_$typeB) $regB 0 $tmp]
+		set tmp [anonreg $typeB $tna::TNA_ITEM_anox]
+		lappend text [list $::tna::OpcodesX(tna_opcode_xxx_$TypesR($typeB)) $regB 0 $tmp]
 		set ::tna::X [set regB $tmp]
 	    } else {
 		set regB $::tna::X
 	    }
 	}
 
-	if { $itemA eq "const" && $itemB eq "const" } {		; # Try constant folding
+	if { $itemA eq $::tna::TNA_ITEM_const && $itemB eq $::tna::TNA_ITEM_const } {		; # Try constant folding
 	    set c [::expr "\$dataA $::expression::opers($op) \$dataB"]
 
 	    lookup $c - - - -
@@ -351,7 +355,7 @@ namespace eval tna {
 	    promote C regC typeC $regA $typeA A $regB $typeB B
 	    dispose $a
 	    dispose $b
-	    lappend text [list $::tna::OpcodesX(tna_opcode_${op}_$typeC) $A $B $regC]
+	    lappend text [list $::tna::OpcodesX(tna_opcode_${op}_$TypesR($typeC)) $A $B $regC]
 
 	    return $C
 	}
@@ -379,7 +383,7 @@ namespace eval tna {
 
 	::array unset regs
 
-	set regs(0) [list 0 any const 0 : 0 0 {} $::tna::TNA_TYPE_int {} {}]
+	set regs(0) [list 0 $::tna::TNA_ITEM_any $::tna::TNA_ITEM_const 0 : 0 0 {} $::tna::TNA_TYPE_int {} {}]
 
 	#$R 0 set type 0 i
     }

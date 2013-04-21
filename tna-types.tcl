@@ -22,5 +22,6 @@ namespace eval tna {
 	     float  float		double  %f 	double	Tcl_GetDoubleFromObj	f 
 	    double  double		double  %f 	double	Tcl_GetDoubleFromObj	d 
     }
+    set Items { any none const vect tna anon anox ivar ovar xvar } 
 }
 

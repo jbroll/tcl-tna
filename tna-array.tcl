@@ -12,18 +12,17 @@ oo::class create tna::thing {
 	    for { set i 0 } { $i < $d } { incr i } {
 		binary scan $bytes x$offs$::tna::TypesScan($type)[lindex $dims 0] row;
 		
-		switch $type {
-		 uchar  { set row [map value $row { expr { $value &        0xFF } }] }
-		 ushort { set row [map value $row { expr { $value &      0xFFFF } }] }
-		 uint   { set row [map value $row { expr { $value &  0xFFFFFFFF } }] }
-		 ulong  {
+		switch $type 										\
+		 $tna::TNA_TYPE_uchar  { set row [map value $row { expr { $value &        0xFF } }] }	\
+		 $tna::TNA_TYPE_ushort { set row [map value $row { expr { $value &      0xFFFF } }] }	\
+		 $tna::TNA_TYPE_uint   { set row [map value $row { expr { $value &  0xFFFFFFFF } }] }	\
+		 $tna::TNA_TYPE_ulong  {
 		    if { [::tna::sizeof_long] == 4 } {
 			  set row [map value $row { expr { $value &          0xFFFFFFFF } }]
 		    } else {
 			  set row [map value $row { expr { $value &  0xFFFFFFFFFFFFFFFF } }]
 		    }
 		 }
-		}
 		
 		return $row
 
@@ -33,7 +32,7 @@ oo::class create tna::thing {
 	    for { set i 0 } { $i < $d } { incr i } {
 		lappend reply [my list-helper $bytes [lrange $dims 1 end] $offs]
 
-		set sum [::tna::sizeof_$type]
+		set sum [::tna::sizeof_$::tna::TypesR($type)]
 		incr offs [red x [lrange $dims 1 end] { set sum [::expr { $sum*$x }] }]
 	    }
 	}
@@ -47,7 +46,7 @@ oo::class create tna::thing {
 	next
     }
 
-    method bytes {} { tna::bytes $data [::expr $size*[tna::sizeof_$type]] }
+    method bytes {} { tna::bytes $data [::expr $size*[tna::sizeof_$tna::TypesR($type)]] }
     method print { { fp stdout } } { puts $fp [my list] }
 }
 
@@ -70,7 +69,7 @@ oo::class create tna::array {
 	array set options [list -index $indxDefault -edge $edgeDefault -offset $offsDefault -data {} -ptr 0]
 	array set options $args
 
-	set type $Type
+	set type [set tna::TNA_TYPE_$Type]
 	set offs $options(-offset)
 	set indx $options(-index)
 	set edge $options(-edge)
@@ -91,7 +90,7 @@ oo::class create tna::array {
 	if { $ptr == 1 } {
 	    set drep ptr
 	    set size 1
-	    set data [::tna::malloc_$type [red x $dims { set size [::expr $size*$x] }]]
+	    set data [::tna::malloc_$Type [red x $dims { set size [::expr $size*$x] }]]
 	} else {
 	    if { $ptr != 0 } {
 		set drep  ptr
@@ -99,12 +98,11 @@ oo::class create tna::array {
 	    } else {
 		set drep bytes
 		if { $data eq {} } {
-		    set size [::tna::sizeof_$type]
+		    set size [::tna::sizeof_$Type]
 		    set data [binary format x[red x $dims { set size [::expr $size*$x] }]]
 		}
 	    }
 	}
-
     }
 
     method list  {} { 
@@ -180,11 +178,11 @@ oo::class create tna::value {
     superclass tna::thing
 
     constructor { Type value } {
-	set type $Type
+	set type [set tna::TNA_TYPE_$Type]
 	set dims { 1 }
 	set offs { 0 }
 	set size 1
-	set data [tna::malloc_$type $size]
+	set data [tna::malloc_$Type $size]
 	set drep ptr
     }
     method list  {} { return [my list-helper [my bytes] 1 0] }
