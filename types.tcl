@@ -23,5 +23,6 @@ namespace eval tna {
 	    double  double		double  %f 	double	Tcl_GetDoubleFromObj	d 
     }
     set Items { any none const vect tna anon anox ivar ovar xvar } 
+    set DReps { value ptr bytes vect }
 }
 

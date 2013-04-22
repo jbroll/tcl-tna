@@ -1,6 +1,6 @@
 
 namespace eval tna {
-    proc disassemble { regs text } {
+    proc disassemble { regs text registers nreg } {
 	variable TypesR
 
 	variable OpcodesX

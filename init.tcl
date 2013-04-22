@@ -1,6 +1,7 @@
 
 namespace eval tna {
     if { [::critcl::compiled] } {
+	if { [RegisterSize] != [Register size] } { error "tna : RegisterSize [RegisterSize] != Register size [Register size]" }
 	::tna::opcodesX
 	set i 0
 	set ::tna::TNA_TYPE_none 0
@@ -19,6 +20,11 @@ namespace eval tna {
 	set i 100
 	foreach tnaItem $::tna::Items {
 	    set ::tna::TNA_ITEM_$tnaItem [incr i]
+	}
+
+	set i 200
+	foreach tnaDRep $::tna::DReps {
+	    set ::tna::TNA_DREP_$tnaDRep [incr i]
 	}
     }
 }

@@ -8,6 +8,8 @@ package require tna
 
 source tna-helpers.tcl
 
+#tna::debug 1
+
 
 ::tcltest::test comment-1.0 { comment1 } -body {
     tna::array create a int 3 3

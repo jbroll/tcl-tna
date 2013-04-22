@@ -5,8 +5,8 @@ tna64	= lib/tna/macosx-x86_64/tna.dylib
 nproc32	= lib/nproc/macosx-ix86/nproc.dylib
 nproc64	= lib/nproc/macosx-x86_64/nproc.dylib
 
-all: arec $(tna32) $(tna64) $(nproc32) $(nproc64)
 x32:      $(tna32)          $(nproc32)
+all: arec $(tna32) $(tna64) $(nproc32) $(nproc64)
 
 
 TNASOURCE = tna.h register.h register.tcl register.unsourced	\
@@ -30,13 +30,13 @@ $(nproc32): nproc.tcl
 $(nproc64): nproc.tcl
 	critcl -target macosx-x86_64 -force -pkg nproc 
 
-register.unsourced : register.tcl
+register.unsourced : register.tcl register.h
 	unsource register.tcl > register.unsourced
 
 test: FORCE
 	cd arec; $(MAKE) test
 	arch -i386   /usr/local/bin/tclsh8.6 ./tna-test.tcl 
-	arch -x86_64 /usr/local/bin/tclsh8.6 ./tna-test.tcl
+	#arch -x86_64 /usr/local/bin/tclsh8.6 ./tna-test.tcl
 
 clean:
 	rm -f tna.tcl

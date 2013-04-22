@@ -13,7 +13,7 @@ typedef struct _Axis {
     long	dims;		/* dimension of the data	*/
 } Axis;
 
-typedef union _ARecValue {
+typedef union _TNAValue {
     char	_char;
     uchar	_uchar;
     short	_short;
@@ -24,15 +24,24 @@ typedef union _ARecValue {
     ulong	_ulong;
     float	_float;
     double	_double;
-} ARecValue;
+} TNAValue;
+
+typedef struct _TNAData {
+    void*	ptr;
+    Tcl_Obj*	bytes;
+    int		vect;
+    double	value;
+} TNAData;
     
 typedef struct _Register {
     char 	 type;		/* data type			*/
     char	 item;
     char	 used;
-    void*	 data;		/* pointer to data 		*/
     Tcl_Obj*	 name;
-    ARecValue	 value;
+    int		 drep;
+    TNAValue	 value;
+    TNAData	 data;		/* pointer to data 		*/
     void*	 offs[NDIM+1];	/* Offset at this index level	*/
     Axis	 axis[NDIM];
+/*    int xxx;			/* There is code missing to assure alignment across struct or struct */
 } Register;

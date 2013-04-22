@@ -6,7 +6,6 @@ package require tcltest
 lappend auto_path lib ../lib arec/lib ../arec/lib
 
 package require nproc
-package require arec
 package require tna
 
 tna::nthread [nproc]

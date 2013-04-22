@@ -37,6 +37,8 @@ namespace eval tna {
     }
 
     proc anonreg { type { regtype {} } } { 				# Allocate a anon register
+	variable R
+
 	if { $regtype eq {} } {
 	    set regtype $::tna::TNA_ITEM_anon 
 	}
@@ -51,7 +53,8 @@ namespace eval tna {
 	}
 
 	set ::tna::regs($name) [list $reg $type $regtype $name : $::tna::TNA_ITEM_anon $regtype {} $type {} {}]
-
+	$R $reg set type $type item $regtype name $name
+	
 	return $reg
     }
     proc dispose { name } {				# Push anon register on list for reuse
@@ -64,7 +67,7 @@ namespace eval tna {
 	set dims {}
 	set slic {}
 
-	if { [info command $name] ne {} } {
+	if { [info command $name] ne {} } {		# The item is a command - Ask it about its tna interface.
 	    set item $::tna::TNA_ITEM_tna
 	    set data [$name data]
 	    set drep [$name drep]
@@ -72,7 +75,7 @@ namespace eval tna {
 	    set dims [$name dims]
 
 	    set slic [$name indx]
-	} elseif { [string is int    $value] } {
+	} elseif { [string is int    $value] } {	# Int
 	    set item $::tna::TNA_ITEM_const
 	    set data $value
 	    set drep  value
@@ -81,7 +84,7 @@ namespace eval tna {
 	    } else {
 		set name $name-$type
 	    }
-	} elseif { [string is double $value] } {
+	} elseif { [string is double $value] } {	# Double
 	    set item $::tna::TNA_ITEM_const
 	    set data $value
 	    set drep  value
@@ -90,7 +93,7 @@ namespace eval tna {
 	    } else {
 		set name $name-$type
 	    }
-	} elseif { $name in $::tna::Axes } {
+	} elseif { $name in $::tna::Axes } {		# An axis letter.
 	    set item $::tna::TNA_ITEM_vect
 	    set type $::tna::TNA_TYPE_int
 	    set data [::expr -([lsearch $::tna::Axes $name]+1)]
@@ -101,7 +104,7 @@ namespace eval tna {
 		set data $name
 		set drep value
 		set type $tna::TNA_TYPE_double
-	    } else {
+	    } else {					# Huh?
 		error "cannot identify item : $name"
 	    }
 	}
@@ -109,10 +112,22 @@ namespace eval tna {
 	set reg [incr ::tna::nreg]
 	set ::tna::regs($name) 	[list $reg $type $item $name : $drep $data {} $type $dims $slic]
 
-	#variable R
-	#$R set 
+	variable R
+	variable RI
+	set RI($name) $reg
+	$R $reg set type $type item $item name $name drep [set ::tna::TNA_DREP_$drep] 
+
+	#puts "$R $reg data set $drep data"
+	#$R $reg data set $drep $data
+	#puts "Was set"$
     }
-    proc register-type { name } { return [lindex ::tna::regs($name) 1] }
+    proc register-type { name } {
+	variable R
+	variable RI
+
+	#return [$R $reg get type]
+	return [lindex ::tna::regs($name) 1]
+    }
 
 
     proc promote { c regc typec args } {		# Promote args to common widest type, emit conversion code
@@ -146,6 +161,8 @@ namespace eval tna {
 
     proc indx  { op name args } {			# bracket operator
 	variable regs
+	variable R
+	variable RI
 
 	register $name $name
 
@@ -160,8 +177,10 @@ namespace eval tna {
 	foreach i { 1 2 5 6 7 8 9 10 } {
 	    lset regs(@$reg) $i [lindex $regs($name) $i]
 	}
+	$R $reg setdict [$R $RI($name) getdict type item]
 
 	lset regs(@$reg) end [$name indx $args]
+	#$R $reg axis setdict [lindex $regs(@$reg) end]
 
 	return @$reg
     }
@@ -181,20 +200,30 @@ namespace eval tna {
 
     proc deref { args } { return * }
     proc dolar { op name } {				# Create a ivar (input) register
+	variable R
+	variable RI
+
 	if { [info exists ::tna::regs($name)] } {
-	    switch [lindex $::tna::regs($name) 2] {
-	     ivar - xvar {}
-	     ovar { lset ::tna::regs($name)] 2 xvar }
+	    switch [lindex $::tna::regs($name) 2] 				\
+	     $::tna::TNA_ITEM_ivar -						\
+	     $::tna::TNA_ITEM_xvar {}						\
+	     ovar {
+		 lset ::tna::regs($name)] 2 $::tna::TNA_ITEM_xvar
+		 $R $RI($name) set item $::tna::TNA_ITEM_xvar 
+	     }									\
 	     default {
 		 error "existing value is not a tcl reference : $name"
 	     }
-	    }
 
 	    return $name
 	}
 	     
+	set reg [incr ::tna::nreg]
 	set ::tna::regs($name) 	\
-	    [list [incr ::tna::nreg] double ivar $name : value $name {} $::tna::TNA_TYPE_double {} {}]
+	    [list [incr ::tna::nreg] $tna::TNA_TYPE_double $tna::TNA_ITEM_ivar $name : value $name {} $::tna::TNA_TYPE_double {} {}]
+
+	set RI($name) $reg 
+	$R $reg set type $tna::TNA_TYPE_double item $tna::TNA_ITEM_ivar name $name
 
 	return $name
     }
@@ -203,6 +232,8 @@ namespace eval tna {
 	variable regs
 	variable text
 	variable TypesR
+	variable R
+	variable RI
 	
 	lookup $a regA typeA itemA - {} $::tna::TNA_ITEM_ovar
 	lookup $b regB typeB -     -
@@ -217,7 +248,8 @@ namespace eval tna {
 	    set regB $tmp
 	}
 	if { $itemA eq $::tna::TNA_ITEM_ivar } {					# Fix up ivar (input) to be xvar
-	    lset ::tna::regs($a) 2 xvar
+	    lset ::tna::regs($a) 2 $::tna::TNA_ITEM_xvar
+	    $R $RI($a) set item $::tna::TNA_ITEM_xvar
 	}
 
 	# If the types are the same and the target is a tmp register,
@@ -368,7 +400,7 @@ namespace eval tna {
 	exprStart
     }
 
-    variable R [tna::Register create reg 0]
+    variable R [tna::Register create ::tna::reg 0]
 
     proc exprStart {} {
 	variable R
@@ -385,21 +417,22 @@ namespace eval tna {
 
 	set regs(0) [list 0 $::tna::TNA_ITEM_any $::tna::TNA_ITEM_const 0 : 0 0 {} $::tna::TNA_TYPE_int {} {}]
 
-	#$R 0 set type 0 i
+	$R 0 set type  $::tna::TNA_ITEM_any item $::tna::TNA_ITEM_const name 0
     }
     proc exprSave {} {
 	variable Code
 	variable regs
 	variable text
+	variable R
 
-	set R {}
+	set r {}
 	foreach { reg } [::array names regs] {
-	    lappend R $regs($reg)
+	    lappend r $regs($reg)
 	}
-	set R [lsort -real -index 0 $R]
+	set r [lsort -real -index 0 $r]
 
 	if { $text ne {} } {
-	    lappend Code [list $R $text]
+	    lappend Code [list $r $text [$R getbytes]  [$R length]]
 	}
 
 	exprStart
@@ -435,6 +468,8 @@ namespace eval tna {
 	}
 
 	foreach stmt $code {
+	    lassign $stmt a b c d 
+	    # puts "$d [format %x [bap $c]] [string length $c] $c"
 	    uplevel 1 [list ::tna::execute {*}$stmt]
 	}
     }
