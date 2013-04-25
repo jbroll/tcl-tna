@@ -1,23 +1,4 @@
 
-
-
-rays 2 3 set 1 2 p { 4 2 }
-
-
-AREC
-
-typedef A {
-    int x 10
-}
-
-A create a 4
-
-a 0 set x 5
-
-
-
-
-
 TNA
 
 List subsections
@@ -39,7 +20,7 @@ Allow threaded reduction
 	is smaller than dims.  Duplicate accumulator in each thread
 	Accumulate after thread are complete.
 
-Conversion from Tcl list value
+Conversion from Tcl list value	- Use code from ARec
     a set {{ 1 2 3 } { 4 5 6 } { 7 8 9 }}
 
 ReShape

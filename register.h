@@ -43,5 +43,4 @@ typedef struct _Register {
     TNAData	 data;		/* pointer to data 		*/
     void*	 offs[NDIM+1];	/* Offset at this index level	*/
     Axis	 axis[NDIM];
-/*    int xxx;			/* There is code missing to assure alignment across struct or struct */
 } Register;

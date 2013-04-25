@@ -23,3 +23,13 @@ proc red { args } {
     }]]
 }
 
+proc enumerate { list } {
+    set i 0
+    foreach item $list {
+	lappend reply $i $item
+	incr i
+    }
+
+    set reply
+}
+

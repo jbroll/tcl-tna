@@ -1,8 +1,10 @@
 
 namespace eval tna {
     if { [::critcl::compiled] } {
-	if { [RegisterSize] != [Register size] } { error "tna : RegisterSize [RegisterSize] != Register size [Register size]" }
+	if { [RegisterSize] != [Register size] } { puts stderr "WARNING tna : RegisterSize [RegisterSize] != Register size [Register size]" }
+
 	::tna::opcodesX
+
 	set i 0
 	set ::tna::TNA_TYPE_none 0
 	foreach { tnaType CType pType pFmt getType getFunc scan } $::tna::Types {

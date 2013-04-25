@@ -1,6 +1,15 @@
 
 #define Min(x, y) (((x) < (y)) ? (x) : (y))
 
+#include <math.h>
+#include <tcl.h>
+
+typedef unsigned char  uchar;
+typedef unsigned short ushort;
+typedef unsigned int   uint;
+typedef unsigned long  ulong;
+
+
 #include "register.h"
 
 typedef struct _Instruct {
@@ -27,3 +36,4 @@ typedef struct _OpTable {
     OpFunc     *func;
     const char *name;
 } OpTable;
+

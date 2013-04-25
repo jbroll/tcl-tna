@@ -115,7 +115,7 @@ namespace eval tna {
 	variable R
 	variable RI
 	set RI($name) $reg
-	$R $reg set type $type item $item name $name drep [set ::tna::TNA_DREP_$drep] 
+	$R $reg set type $type item $item name $name drep [set ::tna::TNA_DREP_$drep] data $data
 
 	#puts "$R $reg data set $drep data"
 	#$R $reg data set $drep $data
@@ -177,7 +177,7 @@ namespace eval tna {
 	foreach i { 1 2 5 6 7 8 9 10 } {
 	    lset regs(@$reg) $i [lindex $regs($name) $i]
 	}
-	$R $reg setdict [$R $RI($name) getdict type item]
+	$R $reg setdict [$R $RI($name) getdict type item drep]
 
 	lset regs(@$reg) end [$name indx $args]
 	#$R $reg axis setdict [lindex $regs(@$reg) end]
@@ -223,7 +223,7 @@ namespace eval tna {
 	    [list [incr ::tna::nreg] $tna::TNA_TYPE_double $tna::TNA_ITEM_ivar $name : value $name {} $::tna::TNA_TYPE_double {} {}]
 
 	set RI($name) $reg 
-	$R $reg set type $tna::TNA_TYPE_double item $tna::TNA_ITEM_ivar name $name
+	$R $reg set type $tna::TNA_TYPE_double item $tna::TNA_ITEM_ivar name $name drep value 
 
 	return $name
     }
@@ -469,7 +469,8 @@ namespace eval tna {
 
 	foreach stmt $code {
 	    lassign $stmt a b c d 
-	    # puts "$d [format %x [bap $c]] [string length $c] $c"
+
+	    #puts "$d [format %x [bap $c]] [string length $c] $c"
 	    uplevel 1 [list ::tna::execute {*}$stmt]
 	}
     }
