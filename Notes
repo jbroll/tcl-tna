@@ -4,8 +4,9 @@ TNA
 Conversion from Tcl list value	- Use code from ARec
     a set {{ 1 2 3 } { 4 5 6 } { 7 8 9 }}
 
-Extension API?
-	Ideas?
+TNA extensions API
+    Add functions as opcodes
+    Ideas?
 
 List subsections
 	a list 4:2,5:8
@@ -44,9 +45,6 @@ Reverse slices
         copy onto target after execution to temp?
 
 Function Calls
-
-TNA extensions
-    Add functions as opcodes
 
 Specific indexing	a[Y+4,X] = b
 
