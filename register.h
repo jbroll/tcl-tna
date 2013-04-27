@@ -13,7 +13,7 @@ typedef struct _Axis {
     long	dims;		/* dimension of the data	*/
 } Axis;
 
-typedef union _TNAValue {
+typedef union _Value {
     char	_char;
     uchar	_uchar;
     short	_short;
@@ -24,14 +24,15 @@ typedef union _TNAValue {
     ulong	_ulong;
     float	_float;
     double	_double;
-} TNAValue;
+    Tcl_Obj*	_object;
+} Value;
 
-typedef struct _TNAData {
+typedef struct _Data {
     void*	ptr;
-    Tcl_Obj*	bytes;
+    Tcl_Obj*	name;
     int		vect;
     double	value;
-} TNAData;
+} Data;
     
 typedef struct _Register {
     char 	 type;		/* data type			*/
@@ -39,8 +40,8 @@ typedef struct _Register {
     char	 used;
     Tcl_Obj*	 name;
     int		 drep;
-    TNAValue	 value;
-    TNAData	 data;		/* pointer to data 		*/
+    Value	 value;
+    Data	 data;		/* pointer to data 		*/
     void*	 offs[NDIM+1];	/* Offset at this index level	*/
     Axis	 axis[NDIM];
 } Register;

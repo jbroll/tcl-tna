@@ -19,10 +19,18 @@ source template.tcl
 source types.tcl
 
 namespace eval tna {
-    critcl::ccode {
+    critcl::ccode [template:subst {
 	#include <stdlib.h>
 	#include <stdio.h>
-    }
+
+	#define RLEN $::tna::regsize
+
+	#include "tna.h"		/* The cheaders directive above didn't seem to take?	*/
+	#include "tpool.h"
+
+	extern OpTable OpCodes[0];
+	extern int     OpCodesN;
+    }]
 
     foreach { type ctype pType   pFmt    getType getFunc scan } $::tna::Types i [iota 1 [::expr [llength $::tna::Types]/7]] { 
 
@@ -44,13 +52,6 @@ namespace eval tna {
     foreach i [iota 101 101+[llength $DReps]] drep $DReps { critcl::ccode "#define TNA_DREP_$drep $i" }
 
     critcl::ccode [template:subst {
-	#define RLEN $::tna::regsize
-
-	#include "tna.h"		/* The cheaders directive above didn't seem to take?	*/
-	#include "tpool.h"
-
-	extern OpTable OpCodes[0];
-	extern int     OpCodesN;
 
 	static TPool *tp = NULL;
 	static nthread   = 1;
@@ -307,6 +308,7 @@ namespace eval tna {
 		    tclValue = regObjv[6];
 		} else {
 		    regs[i].name = regObjv[6];
+
 		    if ( !(tclValue = Tcl_ObjGetVar2(ip, regObjv[6], NULL, 0)) ) {
 			Tcl_Obj *error = Tcl_NewStringObj("can't read \"", -1);
 			Tcl_AppendObjToObj(error, regObjv[6]);

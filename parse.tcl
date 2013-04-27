@@ -115,10 +115,10 @@ namespace eval tna {
 	variable R
 	variable RI
 	set RI($name) $reg
-	$R $reg set type $type item $item name $name drep [set ::tna::TNA_DREP_$drep] data $data
+	$R $reg set type $type item $item name $name drep [set ::tna::TNA_DREP_$drep] 
 
 	#puts "$R $reg data set $drep data"
-	#$R $reg data set $drep $data
+	#$R $reg data set _$drep $data
 	#puts "Was set"$
     }
     proc register-type { name } {
@@ -224,6 +224,7 @@ namespace eval tna {
 
 	set RI($name) $reg 
 	$R $reg set type $tna::TNA_TYPE_double item $tna::TNA_ITEM_ivar name $name drep value 
+	$R $reg value set object $name
 
 	return $name
     }
