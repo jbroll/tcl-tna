@@ -1,17 +1,23 @@
 
 TNA
 
+Conversion from Tcl list value	- Use code from ARec
+    a set {{ 1 2 3 } { 4 5 6 } { 7 8 9 }}
+
+Extension API?
+	Ideas?
+
 List subsections
 	a list 4:2,5:8
 
 TEST tna::index IRAF|Python
 TEST tcl variable access
 
-Incorperate arec support
+Incorperate arec support				- Started
 	arec class support for tna methods
 	support . operator
 
-Replace register list with ARec table
+Replace register list with ARec table			- Started
 	Add nrec/arec allocation
 	Add expansion of record array length
 
@@ -19,9 +25,6 @@ Allow threaded reduction
 	if reduction operator used with accumulator whose dimension
 	is smaller than dims.  Duplicate accumulator in each thread
 	Accumulate after thread are complete.
-
-Conversion from Tcl list value	- Use code from ARec
-    a set {{ 1 2 3 } { 4 5 6 } { 7 8 9 }}
 
 ReShape
     a shape { 3 2 4 }
