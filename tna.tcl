@@ -626,4 +626,25 @@ namespace eval tna {
 	return TCL_OK;
     }
 
+    foreach { type ctype pType   pFmt    getType getFunc scan } $::tna::Types i [iota 1 [::expr [llength $::tna::Types]/7]] { 
+
+	critcl::cproc set-vect-$type { Tcl_Interp* ip long ptr long offs long len Tcl_Obj* list } ok [template:subst {
+	    $ctype *data = ($ctype *) ((char *)ptr + offs);
+	    int i;
+	    int n;
+	    Tcl_Obj **values;
+
+	    if ( Tcl_ListObjGetElements(ip, list, &n, &values) == TCL_ERROR ) { return TCL_ERROR; }
+
+	    for ( i = 0; i < len; i++ ) {
+		$getType this;
+
+		if ( ${getFunc}(ip, values[i%n], &this) == TCL_ERROR ) { return TCL_ERROR; }
+
+		*data++ = this;
+	    }
+
+	    return TCL_OK;
+	}]
+    }
 }

@@ -1,7 +1,4 @@
 
-proc tna::set-vect { type ptr offs list } {
-    puts "set-vect $type $ptr $offs : $list"
-}
 
 oo::class create tna::thing {
     variable type dims data drep size indxDefault
@@ -12,13 +9,11 @@ oo::class create tna::thing {
 	set d [lindex $dims 0]
 		
 	if { [llength $dims] == 1 } {
-	    for { set i 0 } { $i < $d } { incr i } {
-		tna::set-vect $type $ptr $offs $list
-	    }    
+	    tna::set-vect-$tna::TypesR($type) $ptr $offs $dims $list
 	} else {
 
 	    for { set i 0 } { $i < $d } { incr i } {
-		lappend reply [my list-helper $bytes [lrange $dims 1 end] $offs]
+		lappend reply [my set-helper [lindex $list [::expr { $i%[llength $list] }]]  $ptr [lrange $dims 1 end] $offs]
 
 		set sum [::tna::sizeof_$::tna::TypesR($type)]
 		incr offs [red x [lrange $dims 1 end] { set sum [::expr { $sum*$x }] }]
@@ -140,7 +135,7 @@ oo::class create tna::array {
 	if { $drep eq "ptr" } {
 	    return [my set-helper $array      $data  [lreverse $dims] 0]
 	} else {
-	    return [my set-helper $array [bap $data] [lreverse $dims] 0]
+	    return [my set-helper $array [tna::bap $data] [lreverse $dims] 0]
 	}
     }
 
