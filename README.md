@@ -55,3 +55,19 @@ Examples:
 		C = A * B 
     }
 
+
+--------------
+
+    package require tna
+
+    tna::array create A double  6 6
+
+    A set {
+	{ 1 2 3 }
+	{ 4 5 6 }
+	{ 7 8 9 }
+    }
+    puts [join [A list] \n]
+
+
+
