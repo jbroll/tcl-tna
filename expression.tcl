@@ -174,7 +174,7 @@
 		    continue
 		}
 
-		if { [prec ${tok}u] && $prv ne ")" && ($prv eq {} || [prec $prv]) } {
+		if { [prec ${tok}u] && $prv ne ")" && $prv ne "]" && ($prv eq {} || [prec $prv]) } {
 		    set tok ${tok}u
 		}
 

@@ -164,8 +164,6 @@ namespace eval tna {
 	variable R
 	variable RI
 
-	register $name $name
-
 	if { [info commands $name] eq {} } {
 	    error "only an array can be indexed"
 	}
