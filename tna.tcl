@@ -1,10 +1,10 @@
 
 package provide tna 0.5
 
-critcl::tsources tcloo.tcl functional.tcl	\
-		 register.unsourced		\
-		 types.tcl init.tcl		\
-		 array.tcl 			\
+critcl::tsources tcloo.tcl functional.tcl		\
+		 register.unsourced			\
+		 types.tcl init.tcl disassemble.tcl	\
+		 array.tcl 				\
 		 parse.tcl expression.tcl
 critcl::cheaders tna.h register.h tpool/tpool.h
 critcl::csources tpool/tpool.c

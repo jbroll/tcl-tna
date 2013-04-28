@@ -1,8 +1,30 @@
 
+proc tna::set-vect { type ptr offs list } {
+    puts "set-vect $type $ptr $offs : $list"
+}
+
 oo::class create tna::thing {
     variable type dims data drep size indxDefault
 
     set indxDefault XYZ
+
+    method set-helper { list ptr dims offs } {
+	set d [lindex $dims 0]
+		
+	if { [llength $dims] == 1 } {
+	    for { set i 0 } { $i < $d } { incr i } {
+		tna::set-vect $type $ptr $offs $list
+	    }    
+	} else {
+
+	    for { set i 0 } { $i < $d } { incr i } {
+		lappend reply [my list-helper $bytes [lrange $dims 1 end] $offs]
+
+		set sum [::tna::sizeof_$::tna::TypesR($type)]
+		incr offs [red x [lrange $dims 1 end] { set sum [::expr { $sum*$x }] }]
+	    }
+	}
+    }
 
     method list-helper { bytes dims offs } {
 
@@ -59,8 +81,8 @@ oo::class create tna::array {
 
     constructor { Type args } {
 	classvar indxDefault XYZ
-	classvar edgeDefault incl
-	classvar offsDefault 1
+	classvar edgeDefault excl
+	classvar offsDefault 0
 
 	while { [lindex $args 0] ne {} && [string is integer [lindex $args 0]] } {
 	    lappend dims [lindex $args 0]
@@ -113,6 +135,15 @@ oo::class create tna::array {
 	}
     }
 
+
+    method set { array } {
+	if { $drep eq "ptr" } {
+	    return [my set-helper $array      $data  [lreverse $dims] 0]
+	} else {
+	    return [my set-helper $array [bap $data] [lreverse $dims] 0]
+	}
+    }
+
     method indx { { XIndx {} } } {			  # Parse the slice syntax into a list.
 	try {
 	    if { $indx eq "ZYX" } { set XIndx [lreverse $XIndx] }
@@ -140,6 +171,7 @@ oo::class create tna::array {
 
 			if { $s < 0 } { set s [::expr { $d + $s }] }
 
+			set s [::expr { $s - $o }]
 			set e $s
 			set i 1
 		    } else {
@@ -162,6 +194,7 @@ oo::class create tna::array {
 
 		lappend list [list $s $e $i]
 	    }
+	    if { $s < 0 } { error "array index : start is < 0!" }
 
 	} on error message {
 	    puts $::errorInfo
