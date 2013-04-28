@@ -8,10 +8,10 @@ to several other packages including:
 
    * [NAP] : [tcl-nap.sourceforge.net]
    * [narray] : [http://www.ncnr.nist.gov/staff/nickm/narray.html]
-   *
+   * [TArray] : 
 
 TNA is coded in C and Tcl using critcl to glue it into a loadable Tcl package.
-It is a follow up to the [Numeric arrays in pure Tcl] prototype.
+It is a follow up to the [Numeric arrays in pure Tcl] prototype on the Tcl Wiki.
 
 TNA has these nice features:
 
@@ -27,8 +27,8 @@ Commands to create arrays and values:
    Options
 
      * -index <XYZ|ZYX>
-     * -offset x
-     * -inclusive yes
+     * -offset x	(default 0)
+     * -inclusive yes	(default no)
      * -ptr  <bare pointer>
      * -data <bytearray>
 
@@ -39,7 +39,7 @@ Commands to execute expressions:
  * tna::expr	- Compile and execute a tna expression
  * tna::compile - Compile a tna expression, return a list of register, code pairs.
  * tna::execute - Execute a tna list of register, code pairs.
- * tna::disassemble - Conver a list of register, code pairs to pretty text.
+ * tna::disassemble - Convert a list of register, code pairs to pretty text.
 
 Examples:
 
