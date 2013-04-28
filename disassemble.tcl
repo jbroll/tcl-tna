@@ -2,6 +2,7 @@
 namespace eval tna {
     proc disassemble { regs text registers nreg } {
 	variable TypesR
+	variable ItemsR
 
 	variable OpcodesX
 	variable OpcodesR
@@ -27,21 +28,21 @@ namespace eval tna {
 	    lassign $r n type item name : drep data i t dims slice
 
 	    switch $item \
-		$::tna::TNA_ITEM_none  -												\
-		$::tna::TNA_ITEM_anox  -												\
-		$::tna::TNA_ITEM_anon  { append listing [format " %4d  %-8s %-14s  %8s\n" $n $item $name $type] }			\
-		$::tna::TNA_ITEM_vect  { append listing [format " %4d  %-8s %-14s  %8s	%d\n" $n $item $name $type $data] }		\
-		$::tna::TNA_ITEM_const { append listing [format " %4d  %-8s %-14s  %8s	%f\n" $n $item $name $type $data] }		\
+		$::tna::TNA_ITEM_none  -														\
+		$::tna::TNA_ITEM_anox  -														\
+		$::tna::TNA_ITEM_anon  { append listing [format " %4d  %-8s %-14s  %8s\n"     $n $ItemsR($item) $name $TypesR($type)] }			\
+		$::tna::TNA_ITEM_vect  { append listing [format " %4d  %-8s %-14s  %8s	%d\n" $n $ItemsR($item) $name $TypesR($type) $data] }		\
+		$::tna::TNA_ITEM_const { append listing [format " %4d  %-8s %-14s  %8s	%f\n" $n $ItemsR($item) $name $TypesR($type) $data] }		\
 		$::tna::TNA_ITEM_tna   {
 		    if { $drep eq "bytes" } {
-			append listing [format " %4d  %-8s %-14s  %8s	%10s : %s %s\n" $n $item $name $type bytes $dims $slice]
+			append listing [format " %4d  %-8s %-14s  %8s	%10s : %s %s\n"       $n $ItemsR($item) $name $TypesR($type) bytes $dims $slice]
 		    } else {
-			append listing [format " %4d  %-8s %-14s  %8s	0x%08x : %s %s\n" $n $item $name $type $data $dims $slice]
+			append listing [format " %4d  %-8s %-14s  %8s	0x%08x : %s %s\n"     $n $ItemsR($item) $name $TypesR($type) $data $dims $slice]
 		    }
-		}															\
-		$::tna::TNA_ITEM_ivar -													\
-		$::tna::TNA_ITEM_ovar -													\
-		$::tna::TNA_ITEM_xvar { append listing [format " %4d  %-8s %-14s  %8s	%s\n" $n $item $name $type $data] }		\
+		}																	\
+		$::tna::TNA_ITEM_ivar -															\
+		$::tna::TNA_ITEM_ovar -															\
+		$::tna::TNA_ITEM_xvar { append listing [format " %4d  %-8s %-14s  %8s	%s\n" $n $ItemsR($item) $name $TypesR($type) $data] }		\
 		default { append listing $r "\n" }
 	}
 	append listing	"#\n"

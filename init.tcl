@@ -14,6 +14,7 @@ namespace eval tna {
 
 	    set TypesR($i)  $tnaType
 	}
+	set TypesR(101) zero
 	if { [::tna::sizeof_long] == 8 } {
 	    set  ::tna::TypesScan([set TNA_TYPE_long]) w
 	    set ::tna::TypesScan([set TNA_TYPE_ulong]) w
@@ -22,6 +23,7 @@ namespace eval tna {
 	set i 100
 	foreach tnaItem $::tna::Items {
 	    set ::tna::TNA_ITEM_$tnaItem [incr i]
+	    set ItemsR($i) $tnaItem
 	}
 
 	set i 200
