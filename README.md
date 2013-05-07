@@ -8,7 +8,7 @@ to several other packages including:
 
    * [NAP] : [tcl-nap.sourceforge.net]
    * [narray] : [http://www.ncnr.nist.gov/staff/nickm/narray.html]
-   * [TArray] : 
+   * [TArray] : [ http://tarray.sourceforge.net]
 
 TNA is coded in C and Tcl using critcl to glue it into a loadable Tcl package.
 It is a follow up to the [Numeric arrays in pure Tcl] prototype on the Tcl Wiki.

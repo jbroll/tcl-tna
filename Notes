@@ -1,8 +1,6 @@
 
 TNA
 
-Conversion from Tcl list value	- Use code from ARec
-    a set {{ 1 2 3 } { 4 5 6 } { 7 8 9 }}
 
 TNA extensions API
     Add functions as opcodes

@@ -1,7 +1,7 @@
 
 
 oo::class create tna::thing {
-    variable type dims data drep size indxDefault
+    variable type dims data drep size indxDefault array-struct
 
     set indxDefault XYZ
 

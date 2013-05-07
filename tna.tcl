@@ -4,7 +4,7 @@ package provide tna 0.5
 critcl::tsources tcloo.tcl functional.tcl		\
 		 register.unsourced			\
 		 types.tcl init.tcl disassemble.tcl	\
-		 array.tcl 				\
+		 array.tcl api.tcl			\
 		 parse.tcl expression.tcl
 critcl::cheaders tna.h register.h tpool/tpool.h
 critcl::csources tpool/tpool.c
@@ -32,7 +32,7 @@ namespace eval tna {
 	extern int     OpCodesN;
     }]
 
-    foreach { type ctype pType   pFmt    getType getFunc scan } $::tna::Types i [iota 1 [::expr [llength $::tna::Types]/7]] { 
+    foreach { type ctype pType   pFmt    getType getFunc scan } $Types i [iota 1 [::expr [llength $::tna::Types]/7]] { 
 
 	# Create a proc to allocate memory, and return the sizeof each type
 	#
@@ -49,7 +49,7 @@ namespace eval tna {
 	append TypeCases "case TNA_TYPE_$type:	r->value._$type = x;	break;\n"
     }
     foreach i [iota 101 101+[llength $Items]] item $Items { critcl::ccode "#define TNA_ITEM_$item $i" }
-    foreach i [iota 101 101+[llength $DReps]] drep $DReps { critcl::ccode "#define TNA_DREP_$drep $i" }
+    foreach i [iota 201 201+[llength $DReps]] drep $DReps { critcl::ccode "#define TNA_DREP_$drep $i" }
 
     critcl::ccode [template:subst {
 
@@ -355,7 +355,7 @@ namespace eval tna {
 		if ( !strcmp(Tcl_GetStringFromObj(regObjv[5], NULL), "bytes") ) {
 		    regs[i].data.ptr = Tcl_GetByteArrayFromObj(regObjv[6], NULL);
 		} else {
-		    if ( Tcl_GetLongFromObj( ip, regObjv[6], &regs[i].data.ptr ) == TCL_ERROR ) {
+		    if ( Tcl_GetLongFromObj( ip, regObjv[6], (long*) &regs[i].data.ptr ) == TCL_ERROR ) {
 			//free(regs);
 			return TCL_ERROR;
 		    }

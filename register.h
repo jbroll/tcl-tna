@@ -45,3 +45,4 @@ typedef struct _Register {
     void*	 offs[NDIM+1];	/* Offset at this index level	*/
     Axis	 axis[NDIM];
 } Register;
+
