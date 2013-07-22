@@ -1,7 +1,7 @@
 
 package provide tna 0.5
 
-critcl::tsources tcloo.tcl functional.tcl		\
+critcl::tsources arec/jbr.tcl/tcloo.tcl arec/jbr.tcl/func.tcl		\
 		 register.unsourced			\
 		 types.tcl init.tcl disassemble.tcl	\
 		 array.tcl api.tcl			\
@@ -13,8 +13,8 @@ critcl::clibraries opcodes.o
 critcl::cflags -O3 -DTCL_THREADS=1
 critcl::clibraries -lm
 
-source functional.tcl
-source template.tcl
+source arec/jbr.tcl/func.tcl
+source arec/jbr.tcl/template.tcl
 
 source types.tcl
 
