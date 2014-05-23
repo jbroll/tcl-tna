@@ -4,7 +4,7 @@ package provide tna 0.5
 critcl::tsources arec/jbr.tcl/tcloo.tcl arec/jbr.tcl/func.tcl		\
 		 register.unsourced			\
 		 types.tcl init.tcl disassemble.tcl	\
-		 array.tcl api.tcl			\
+		 array.tcl 				\
 		 parse.tcl expression.tcl
 critcl::cheaders tna.h register.h tpool/tpool.h
 critcl::csources tpool/tpool.c
@@ -602,7 +602,7 @@ namespace eval tna {
 		     case TNA_ITEM_ovar:
 		     case TNA_ITEM_xvar: {
 			if ( !k ) {
-			    Tcl_ObjSetVar2(ip, regs[i].name, NULL, Tcl_NewDoubleObj(regs[i].value._double), 0);
+			    Tcl_SetVar2(ip, regs[i].name, NULL, Tcl_NewDoubleObj(regs[i].value._double), 0);
 			}
 			break;
 		     }

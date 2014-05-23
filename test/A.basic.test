@@ -12,6 +12,7 @@ tna::debug 2
 
     tna::array create a int 3 3
 
+    puts [a list]
     tna::expr { # Comment at start
 		a = 3 	# Following comment}
     puts [a list]

@@ -24,12 +24,11 @@ typedef union _Value {
     ulong	_ulong;
     float	_float;
     double	_double;
-    Tcl_Obj*	_object;
 } Value;
 
 typedef struct _Data {
     void*	ptr;
-    Tcl_Obj*	name;
+    char*	name;
     int		vect;
     double	value;
 } Data;
@@ -38,7 +37,7 @@ typedef struct _Register {
     char 	 type;		/* data type			*/
     char	 item;
     char	 used;
-    Tcl_Obj*	 name;
+    char*	 name;
     int		 drep;
     Value	 value;
     Data	 data;		/* pointer to data 		*/

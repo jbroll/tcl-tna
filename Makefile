@@ -7,8 +7,7 @@ all: tna.$(OS) nproc.$(OS)
 TNASOURCE = tna.h register.h register.tcl register.unsourced	\
 	    tna.tcl init.tcl parse.tcl disassemble.tcl		\
 	    array.tcl expression.tcl 				\
-	    arec/jbr.tcl/func.tcl arec/jbr.tcl/tcloo.tcl	\
-	    api.tcl
+	    arec/jbr.tcl/func.tcl arec/jbr.tcl/tcloo.tcl
 
 
 tna.Darwin : arec.Darwin.i386 arec.Darwin.x86_64 tna.Darwin.i386 tna.Darwin.x86_64 
@@ -29,29 +28,34 @@ tna.Darwin : tna.Darwin.i386 tna.Darwin.x86_64
 
 tna.Darwin.i386	  : lib/tna/macosx-ix86/tna.dylib
 tna.Darwin.x86_64 : lib/tna/macosx-x86_64/tna.dylib
+tna.Linux.x86_64  : lib/tna/Linux.x86_64/tna.so
 
 lib/tna/macosx-ix86/tna.dylib   : $(TNASOURCE) opcodes32.o
 	critcl -target macosx-x86_32 -pkg tna 
-	#rm -rf lib/tna/macosx-ix86
-	#mv lib/tna/macosx-x86_32 lib/tna/macosx-ix86
 	rm opcodes.o
 
 lib/tna/macosx-x86_64/tna.dylib : $(TNASOURCE) opcodes64.o
 	critcl -target macosx-x86_64 -pkg tna 
 	rm opcodes.o
 
+lib/tna/Linux.x86_64/tna.so : $(TNASOURCE) opcodes.o
+	critcl -pkg tna 
+
 nproc.Darwin : nproc.Darwin.i386 nproc.Darwin.x86_64
+nproc.Linux  : nproc.Linux.x86_64
 
 nproc.Darwin.i386	: lib/nproc/macosx-ix86/nproc.dylib
 nproc.Darwin.x86_64	: lib/nproc/macosx-x86_64/nproc.dylib
+nproc.Linux.x86_64	: lib/nproc/Linux.x86_64/nproc.so
 
 lib/nproc/macosx-ix86/nproc.dylib   : nproc.tcl
 	critcl -target macosx-x86_32 -force -pkg nproc 
-	#rm -rf lib/nproc/macosx-ix86
-	#mv lib/nproc/macosx-x86_32 lib/nproc/macosx-ix86
 
 lib/nproc/macosx-x86_64/nproc.dylib : nproc.tcl
 	critcl -target macosx-x86_64 -force -pkg nproc 
+
+lib/nproc/Linux.x86_64/nproc.so : nproc.tcl
+	critcl -force -pkg nproc 
 	
 
 register.unsourced : register.tcl register.h
@@ -85,7 +89,7 @@ opcodes64.o : opcodes.o opcodes.c
 	ln -s opcodes64.o opcodes.o
 
 opcodes.o : opcodes.c
-	true
+	$(CC) -c -O3 -fPIC      opcodes.c -o opcodes.o
 
 opcodes.c : opcodes.tcl
 	tclkit8.6 opcodes.tcl > opcodes.c

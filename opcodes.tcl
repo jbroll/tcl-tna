@@ -1,6 +1,6 @@
 
 source types.tcl
-source template.tcl
+source arec/jbr.tcl/template.tcl
 
 
     variable IntOnly { mod band bor bxor bnot shr shl }
@@ -68,6 +68,7 @@ source template.tcl
     }
 
     puts {
+#include <stdio.h>
 #include "tna.h"
 
 #define abs(x)	(x < 0 ? -(x) : (x))

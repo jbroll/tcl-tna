@@ -2,7 +2,7 @@
 #define Min(x, y) (((x) < (y)) ? (x) : (y))
 
 #include <math.h>
-#include <tcl.h>
+//#include <tcl.h>
 
 typedef unsigned char  uchar;
 typedef unsigned short ushort;
