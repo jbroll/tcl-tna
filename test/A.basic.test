@@ -2,14 +2,21 @@
 #
 
 package require tcltest
-lappend auto_path ../lib
+lappend auto_path lib arec/lib
 
 package require tna
 
-source tna-helpers.tcl
+source test/tna-helpers.tcl
 
-#tna::debug 1
+tna::debug 2
 
+    tna::array create a int 3 3
+
+    tna::expr { # Comment at start
+		a = 3 	# Following comment}
+    puts [a list]
+
+    exit
 
 ::tcltest::test comment-1.0 { comment1 } -body {
     tna::array create a int 3 3
@@ -18,7 +25,9 @@ source tna-helpers.tcl
 		a = 3 	# Following comment}
     a list
 } -cleanup {
+    puts HERE
     a destroy
+    puts THERE
 } -result  [matrix 3 3 3]
 
 foreach { types result } { { char uchar short ushort int uint long ulong } 3 { float double } 3.0 } {

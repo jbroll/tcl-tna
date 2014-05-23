@@ -73,6 +73,7 @@ namespace eval tna {
 	    set drep [$name drep]
 	    set type [$name type]
 	    set dims [$name dims]
+	    set flds _object
 
 	    set slic [$name indx]
 	} elseif { [string is int    $value] } {	# Int
@@ -81,8 +82,10 @@ namespace eval tna {
 	    set drep  value
 	    if { $type eq {} } {
 		set type $tna::TNA_TYPE_int
+		set flds _int
 	    } else {
 		set name $name-$type
+		set flds _$type
 	    }
 	} elseif { [string is double $value] } {	# Double
 	    set item $::tna::TNA_ITEM_const
@@ -90,20 +93,24 @@ namespace eval tna {
 	    set drep  value
 	    if { $type eq {} } {
 		set type $tna::TNA_TYPE_double
+		set flds _double
 	    } else {
 		set name $name-$type
+		set flds _$type
 	    }
 	} elseif { $name in $::tna::Axes } {		# An axis letter.
 	    set item $::tna::TNA_ITEM_vect
 	    set type $::tna::TNA_TYPE_int
 	    set data [::expr -([lsearch $::tna::Axes $name]+1)]
 	    set drep  vect
+	    set flds _long
 	} else {
 	    if { $item ne {} } {
 		set item $item
 		set data $name
 		set drep value
 		set type $tna::TNA_TYPE_double
+		set flds _double
 	    } else {					# Huh?
 		error "cannot identify item : $name"
 	    }
@@ -115,7 +122,8 @@ namespace eval tna {
 	variable R
 	variable RI
 	set RI($name) $reg
-	$R $reg set type $type item $item name $name drep [set ::tna::TNA_DREP_$drep] 
+	$R set $reg type  $type item $item name $name drep [set ::tna::TNA_DREP_$drep] 
+	$R set $reg value $flds $data
 
 	#puts "$R $reg data set $drep data"
 	#$R $reg data set _$drep $data
@@ -217,12 +225,13 @@ namespace eval tna {
 	}
 	     
 	set reg [incr ::tna::nreg]
+
 	set ::tna::regs($name) 	\
-	    [list [incr ::tna::nreg] $tna::TNA_TYPE_double $tna::TNA_ITEM_ivar $name : value $name {} $::tna::TNA_TYPE_double {} {}]
+	    [list $reg $tna::TNA_TYPE_double $tna::TNA_ITEM_ivar $name : value $name {} $::tna::TNA_TYPE_double {} {}]
 
 	set RI($name) $reg 
-	$R $reg set type $tna::TNA_TYPE_double item $tna::TNA_ITEM_ivar name $name drep value 
-	$R $reg value set object $name
+	$R set $reg type $tna::TNA_TYPE_double item $tna::TNA_ITEM_ivar name $name drep $::tna::TNA_DREP_value
+	$R set $reg value _object $name
 
 	return $name
     }
@@ -416,7 +425,7 @@ namespace eval tna {
 
 	set regs(0) [list 0 $::tna::TNA_ITEM_any $::tna::TNA_ITEM_const 0 : 0 0 {} $::tna::TNA_TYPE_int {} {}]
 
-	$R 0 set type  $::tna::TNA_ITEM_any item $::tna::TNA_ITEM_const name 0
+	$R set 0 type  $::tna::TNA_ITEM_any item $::tna::TNA_ITEM_const name 0
     }
     proc exprSave {} {
 	variable Code
@@ -466,12 +475,16 @@ namespace eval tna {
 	    }
 	}
 
+
 	foreach stmt $code {
+
+
 	    lassign $stmt a b c d 
 
 	    #puts "$d [format %x [bap $c]] [string length $c] $c"
 	    uplevel 1 [list ::tna::execute {*}$stmt]
 	}
+	puts "HERE"
     }
     proc debug { x } { set ::tna::debug $x }
 

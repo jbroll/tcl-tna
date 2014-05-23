@@ -1,6 +1,13 @@
 
 namespace eval tna {
     proc disassemble { regs text registers nreg } {
+	tna::Register create ::tna::R 0
+
+	R setbytes $registers
+
+	puts "R : [R length]"
+	puts "R : [join [R getdict] \n]"
+
 	variable TypesR
 	variable ItemsR
 

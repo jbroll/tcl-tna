@@ -100,7 +100,7 @@
     }
  }
 
- TPoolThreadWait(TPoolThread *t) {
+ void TPoolThreadWait(TPoolThread *t) {
     Tcl_MutexLock(&t->lock);
 
     while ( t->work ) {

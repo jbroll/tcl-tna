@@ -2,7 +2,7 @@
 OS  =$(shell uname)
 ARCH=$(OS).$(shell uname -m)
 
-all: tna.$(OS) arec.$(OS) nproc.$(OS)
+all: tna.$(OS) nproc.$(OS)
 
 TNASOURCE = tna.h register.h register.tcl register.unsourced	\
 	    tna.tcl init.tcl parse.tcl disassemble.tcl		\
@@ -11,8 +11,8 @@ TNASOURCE = tna.h register.h register.tcl register.unsourced	\
 	    api.tcl
 
 
-tna.Darwin : arec.Darwin.i386 arec.Darwin.x86_64 tna.Darwin.i386 tna.Darwin.x86_64 test.Darwin
-tna.Linux  :                  arec.Linux.x86_64                  tna.Linux.x86_64  test.Linux
+tna.Darwin : arec.Darwin.i386 arec.Darwin.x86_64 tna.Darwin.i386 tna.Darwin.x86_64 
+tna.Linux  :                  arec.Linux.x86_64                  tna.Linux.x86_64 
 
 
 arec.Darwin.i386	:
@@ -58,7 +58,7 @@ register.unsourced : register.tcl register.h
 	unsource register.tcl > register.unsourced
 
 test.Darwin: FORCE
-	cd arec; $(MAKE) test
+	#cd arec; $(MAKE) test
 	arch -i386   /usr/local/bin/tclsh8.6 ./tna-test.tcl 
 	arch -x86_64 /usr/local/bin/tclsh8.6 ./tna-test.tcl
 

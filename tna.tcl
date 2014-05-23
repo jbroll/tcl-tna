@@ -53,14 +53,14 @@ namespace eval tna {
 
     critcl::ccode [template:subst {
 
-	static TPool *tp = NULL;
-	static nthread   = 1;
+	static TPool *tp   = NULL;
+	static int nthread = 1;
 
 	int SizeOf[] = {
 	    0 [: { type ctype pType   pFmt    getType getFunc scan } $::tna::Types { , sizeof($type) }]
 	};
 
-	rprint(Register *r, int n) {
+	void rprint(Register *r, int n) {
 	    int i;
 
 	    printf("%p data %p item %d type %d sizeof %d\n"
@@ -261,8 +261,6 @@ namespace eval tna {
 	//
 	if ( Tcl_ListObjGetElements(ip, regsList, &nregs, &regsObjv) == TCL_ERROR ) { return TCL_ERROR; }
 
-	//regs = calloc(nregs, sizeof(Register));
-
 	for ( i = 0; i < nregs; i++ ) {
 	    int	     leng;
 	    int      regObjc;
@@ -273,13 +271,8 @@ namespace eval tna {
 	    // reg typ item name : drep data obj dat dim slice
 	    //
 
-//	    itemType = Tcl_GetStringFromObj(regObjv[2], NULL);
-//	    regs[i].item = itemType[0];
+	    printf("reg %d Item %d Type %d\n", i, regs[i].item, regs[i].type);
 
-//	    if ( Tcl_GetIntFromObj( ip, regObjv[8], &dataType ) == TCL_ERROR ) {
-//		free(regs);
-//		return TCL_ERROR;
-//	    }
 
 	    dataType = regs[i].type;
 
@@ -292,6 +285,8 @@ namespace eval tna {
 		    //free(regs);
 		    return TCL_ERROR;
 		}
+
+		data = regs[i].value._long;
 
 		slice_val(&regs[i], dataType, (void *)&regs[i].value);
 		for ( j = 0; j < NDIM; j++ ) { regs[i].axis[j].size = data; }
@@ -463,6 +458,8 @@ namespace eval tna {
 	    }
 	}
 
+	printf("Registers Decoded\n");
+
 	// Convert the text program into an array of Instruct.
 	//
 	if ( Tcl_ListObjGetElements(ip, textList, &ntext, &textObjv) == TCL_ERROR ) {
@@ -504,6 +501,8 @@ namespace eval tna {
 		regs[thisInt].used = 1;
 	    }
 	}
+
+	printf("Copy registers for threading %d\n", nthread);
 
 	{   int	           k;
 	    Machine        m[16];
@@ -584,7 +583,12 @@ namespace eval tna {
 		thr[k] = TPoolThreadStart(tp, (TPoolWork) slice_thr, &m[k]);
 	    }
 
+
+	    printf("Start thread 0\n");
+
 	    slice_thr(&m[0]);
+
+	    printf("Wait threads\n");
 
 	    for ( k = 0; k < nthread; k++ ) {
 		if ( k ) { TPoolThreadWait(thr[k]); }
@@ -614,6 +618,8 @@ namespace eval tna {
 	    }
 	    free(text);
 	}
+
+	printf("Done\n");
 
 	return TCL_OK;
     }]

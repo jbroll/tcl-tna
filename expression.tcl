@@ -11,9 +11,9 @@
     #
     # precedence values are spaced out by multiplying the nominal
     # C++ precedence by 10.  This should allow applications to add other
-    # operators as needed at any preceduce required.
+    # operators as needed at any precedece required.
     #
-    # The unary * has been changes to nulary to support tna
+    # The unary * has been changed to nulary to support tna
     #
     # The index [] operator is nary and treated similarly to a function call to "indx" instead
     # of "call".
@@ -73,7 +73,7 @@
     }
 
 
-    # A little helper to sort a precedence table in to a [string map] mapping that will be used
+    # A little helper to sort a precedence table into a [string map] mapping that will be used
     # for "lexical analysis".
     #
     proc prep-tokens { tokens } {
