@@ -302,7 +302,7 @@ namespace eval tna {
 		if ( regs[i].item == TNA_ITEM_const ) {					
 		    tclValue = regObjv[6];
 		} else {
-		    regs[i].name = regObjv[6];
+		    regs[i].name = Tcl_GetStringFromObj(regObjv[6], NULL);
 
 		    if ( !(tclValue = Tcl_ObjGetVar2(ip, regObjv[6], NULL, 0)) ) {
 			Tcl_Obj *error = Tcl_NewStringObj("can't read \"", -1);
@@ -602,7 +602,7 @@ namespace eval tna {
 		     case TNA_ITEM_ovar:
 		     case TNA_ITEM_xvar: {
 			if ( !k ) {
-			    Tcl_SetVar2(ip, regs[i].name, NULL, Tcl_NewDoubleObj(regs[i].value._double), 0);
+			    Tcl_ObjSetVar2(ip, Tcl_NewStringObj(regs[i].name, -1), NULL, Tcl_NewDoubleObj(regs[i].value._double), 0);
 			}
 			break;
 		     }

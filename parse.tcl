@@ -73,7 +73,7 @@ namespace eval tna {
 	    set drep [$name drep]
 	    set type [$name type]
 	    set dims [$name dims]
-	    set flds _object
+	    set flds _string
 
 	    set slic [$name indx]
 	} elseif { [string is int    $value] } {	# Int
@@ -231,7 +231,7 @@ namespace eval tna {
 
 	set RI($name) $reg 
 	$R set $reg type $tna::TNA_TYPE_double item $tna::TNA_ITEM_ivar name $name drep $::tna::TNA_DREP_value
-	$R set $reg value _object $name
+	$R set $reg value _string $name
 
 	return $name
     }

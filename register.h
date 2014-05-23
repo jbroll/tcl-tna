@@ -24,6 +24,7 @@ typedef union _Value {
     ulong	_ulong;
     float	_float;
     double	_double;
+    char*	_string;
 } Value;
 
 typedef struct _Data {
