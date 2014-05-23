@@ -53,7 +53,7 @@ namespace eval tna {
 	}
 
 	set ::tna::regs($name) [list $reg $type $regtype $name : $::tna::TNA_ITEM_anon $regtype {} $type {} {}]
-	$R $reg set type $type item $regtype name $name
+	$R set $reg type $type item $regtype name $name
 	
 	return $reg
     }
@@ -183,7 +183,7 @@ namespace eval tna {
 	foreach i { 1 2 5 6 7 8 9 10 } {
 	    lset regs(@$reg) $i [lindex $regs($name) $i]
 	}
-	$R $reg setdict [$R $RI($name) getdict type item drep]
+	$R setdict $reg [$R $RI($name) getdict type item drep]
 
 	lset regs(@$reg) end [$name indx $args]
 	#$R $reg axis setdict [lindex $regs(@$reg) end]
@@ -215,7 +215,7 @@ namespace eval tna {
 	     $::tna::TNA_ITEM_xvar {}						\
 	     ovar {
 		 lset ::tna::regs($name)] 2 $::tna::TNA_ITEM_xvar
-		 $R $RI($name) set item $::tna::TNA_ITEM_xvar 
+		 $R set $RI($name) item $::tna::TNA_ITEM_xvar 
 	     }									\
 	     default {
 		 error "existing value is not a tcl reference : $name"
@@ -257,7 +257,7 @@ namespace eval tna {
 	}
 	if { $itemA eq $::tna::TNA_ITEM_ivar } {					# Fix up ivar (input) to be xvar
 	    lset ::tna::regs($a) 2 $::tna::TNA_ITEM_xvar
-	    $R $RI($a) set item $::tna::TNA_ITEM_xvar
+	    $R set $RI($a) item $::tna::TNA_ITEM_xvar
 	}
 
 	# If the types are the same and the target is a tmp register,
