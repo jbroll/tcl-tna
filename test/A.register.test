@@ -1,0 +1,16 @@
+#!/usr/bin/env tclkit8.6
+#
+package require tcltest
+lappend auto_path lib arec/lib
+
+package require tna
+
+source test/tna-helpers.tcl
+
+::tna::Register create r 0
+
+r set 0 value _int -1
+
+r print
+
+

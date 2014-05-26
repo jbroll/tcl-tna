@@ -6,7 +6,7 @@ critcl::tsources arec/jbr.tcl/tcloo.tcl arec/jbr.tcl/func.tcl		\
 		 types.tcl init.tcl disassemble.tcl	\
 		 array.tcl 				\
 		 parse.tcl expression.tcl
-critcl::cheaders tna.h register.h tpool/tpool.h
+critcl::cheaders tna.h register.h tpool/tpool.h arec/arec.h
 critcl::csources tpool/tpool.c
 critcl::clibraries opcodes.o
 
@@ -52,6 +52,7 @@ namespace eval tna {
     foreach i [iota 201 201+[llength $DReps]] drep $DReps { critcl::ccode "#define TNA_DREP_$drep $i" }
 
     critcl::ccode [template:subst {
+	#include "arec.h"
 
 	static TPool *tp   = NULL;
 	static int nthread = 1;
@@ -70,12 +71,14 @@ namespace eval tna {
 		    , r->type
 		    , SizeOf[r->type]
 		);
-	    for ( i = 0; i <= n; i++ ) {
+
+	    printf("	value int %d long %ld	%p %p\n", r->value._int, r->value._long, &r->value._int, &r->value._long);
+	    for ( i = 0; i < n; i++ ) {
 		printf("	star %ld size %ld incr %ld dims %ld step %ld		%p\n"
 		    , r->axis[i].star, r->axis[i].size, r->axis[i].incr, r->axis[i].dims, r->axis[i].step, r->offs[i]);
 	    }
-	    printf("	%p\n", r->offs[i]);
 	}
+
 
 	void slice_val(Register *r, int type, void *value) 	// Initialize a register to access a value
 	{
@@ -179,9 +182,9 @@ namespace eval tna {
 			if ( R[instr->r2].axis[dim].size > 1 ) { bite = Min(bite, R[instr->r2].axis[dim].size); }
 			if ( R[instr->r3].axis[dim].size > 1 ) { bite = Min(bite, R[instr->r3].axis[dim].size); }
 
-			//printf("R1 %d\n", R[instr->r1].axis[dim].size);
-			//printf("R2 %d\n", R[instr->r2].axis[dim].size);
-			//printf("R3 %d\n", R[instr->r3].axis[dim].size);
+			//printf("R1 %ld\n", R[instr->r1].axis[dim].size);
+			//printf("R2 %ld\n", R[instr->r2].axis[dim].size);
+			//printf("R3 %ld\n", R[instr->r3].axis[dim].size);
 			//printf("Bite : %d\n", bite);
 
 			for ( ; left > 0; left -= bite ) {	// Run at most the length of the smallest slice
@@ -211,6 +214,18 @@ namespace eval tna {
 	}
 	void slice_thr(Machine *machine) { slice_run(machine, machine->nd); }
     }]
+
+	critcl::cproc ::tna::Register::print {} ok {
+	    ARecPath *path = (ARecPath *) clientdata;
+	    int i;
+
+	    for ( i = path->first; i <= path->last; i++ ) {
+		rprint(path->recs+path->inst->type->size*i, NDIM);
+	    }
+
+
+	    return TCL_OK;
+	} -pass-cdata true
 
     critcl::cproc RegisterSize {} int { return sizeof(Register); }
 
@@ -261,6 +276,7 @@ namespace eval tna {
 	//
 	if ( Tcl_ListObjGetElements(ip, regsList, &nregs, &regsObjv) == TCL_ERROR ) { return TCL_ERROR; }
 
+
 	for ( i = 0; i < nregs; i++ ) {
 	    int	     leng;
 	    int      regObjc;
@@ -270,9 +286,6 @@ namespace eval tna {
 
 	    // reg typ item name : drep data obj dat dim slice
 	    //
-
-	    printf("reg %d Item %d Type %d\n", i, regs[i].item, regs[i].type);
-
 
 	    dataType = regs[i].type;
 
@@ -286,7 +299,7 @@ namespace eval tna {
 		    return TCL_ERROR;
 		}
 
-		data = regs[i].value._long;
+		data = regs[i].value._int;
 
 		slice_val(&regs[i], dataType, (void *)&regs[i].value);
 		for ( j = 0; j < NDIM; j++ ) { regs[i].axis[j].size = data; }
@@ -347,13 +360,9 @@ namespace eval tna {
 
 		//regs[i].type = dataType;
 
-		if ( !strcmp(Tcl_GetStringFromObj(regObjv[5], NULL), "bytes") ) {
-		    regs[i].data.ptr = Tcl_GetByteArrayFromObj(regObjv[6], NULL);
-		} else {
-		    if ( Tcl_GetLongFromObj( ip, regObjv[6], (long*) &regs[i].data.ptr ) == TCL_ERROR ) {
-			//free(regs);
-			return TCL_ERROR;
-		    }
+		if ( Tcl_GetLongFromObj( ip, regObjv[6], (long*) &regs[i].data.ptr ) == TCL_ERROR ) {
+		    //free(regs);
+		    return TCL_ERROR;
 		}
 
 		/* Unpack the dims and slice data	*/
@@ -456,9 +465,11 @@ namespace eval tna {
 		return TCL_ERROR;
 	     }
 	    }
+
+	    //rprint(&regs[i], NDIM);
 	}
 
-	printf("Registers Decoded\n");
+
 
 	// Convert the text program into an array of Instruct.
 	//
@@ -501,8 +512,6 @@ namespace eval tna {
 		regs[thisInt].used = 1;
 	    }
 	}
-
-	printf("Copy registers for threading %d\n", nthread);
 
 	{   int	           k;
 	    Machine        m[16];
@@ -584,11 +593,7 @@ namespace eval tna {
 	    }
 
 
-	    printf("Start thread 0\n");
-
 	    slice_thr(&m[0]);
-
-	    printf("Wait threads\n");
 
 	    for ( k = 0; k < nthread; k++ ) {
 		if ( k ) { TPoolThreadWait(thr[k]); }
@@ -619,15 +624,11 @@ namespace eval tna {
 	    free(text);
 	}
 
-	printf("Done\n");
-
 	return TCL_OK;
     }]
 
     critcl::cproc bytes { Tcl_Interp* ip long data int size } ok {
-	//printf("bytes : %p %d\n", data, size);
 	Tcl_SetObjResult(ip, Tcl_NewByteArrayObj((void *)data, size));
-	//printf("set : %p %d\n", data, size);
 
 	return TCL_OK;
     }

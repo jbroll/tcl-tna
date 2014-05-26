@@ -69,11 +69,15 @@ namespace eval tna {
 
 	if { [info command $name] ne {} } {		# The item is a command - Ask it about its tna interface.
 	    set item $::tna::TNA_ITEM_tna
-	    set data [$name data]
 	    set drep [$name drep]
 	    set type [$name type]
 	    set dims [$name dims]
-	    set flds _string
+		set data [$name data]
+	    set flds _long
+
+	    if { $drep eq "bytes" } {
+		set data [bap $data]
+	    }
 
 	    set slic [$name indx]
 	} elseif { [string is int    $value] } {	# Int
@@ -85,7 +89,7 @@ namespace eval tna {
 		set flds _int
 	    } else {
 		set name $name-$type
-		set flds _$type
+		set flds _int
 	    }
 	} elseif { [string is double $value] } {	# Double
 	    set item $::tna::TNA_ITEM_const
@@ -96,14 +100,14 @@ namespace eval tna {
 		set flds _double
 	    } else {
 		set name $name-$type
-		set flds _$type
+		set flds _double
 	    }
 	} elseif { $name in $::tna::Axes } {		# An axis letter.
 	    set item $::tna::TNA_ITEM_vect
 	    set type $::tna::TNA_TYPE_int
 	    set data [::expr -([lsearch $::tna::Axes $name]+1)]
 	    set drep  vect
-	    set flds _long
+	    set flds _int
 	} else {
 	    if { $item ne {} } {
 		set item $item
@@ -124,10 +128,6 @@ namespace eval tna {
 	set RI($name) $reg
 	$R set $reg type  $type item $item name $name drep [set ::tna::TNA_DREP_$drep] 
 	$R set $reg value $flds $data
-
-	#puts "$R $reg data set $drep data"
-	#$R $reg data set _$drep $data
-	#puts "Was set"$
     }
     proc register-type { name } {
 	variable R
@@ -183,7 +183,7 @@ namespace eval tna {
 	foreach i { 1 2 5 6 7 8 9 10 } {
 	    lset regs(@$reg) $i [lindex $regs($name) $i]
 	}
-	$R setdict $reg [$R $RI($name) getdict type item drep]
+	$R setdict $reg [$R getdict $RI($name) type item drep]
 
 	lset regs(@$reg) end [$name indx $args]
 	#$R $reg axis setdict [lindex $regs(@$reg) end]
@@ -484,7 +484,6 @@ namespace eval tna {
 	    #puts "$d [format %x [bap $c]] [string length $c] $c"
 	    uplevel 1 [list ::tna::execute {*}$stmt]
 	}
-	puts "HERE"
     }
     proc debug { x } { set ::tna::debug $x }
 

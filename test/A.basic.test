@@ -1,6 +1,5 @@
 #!/usr/bin/env tclkit8.6
 #
-
 package require tcltest
 lappend auto_path lib arec/lib
 
@@ -8,7 +7,7 @@ package require tna
 
 source test/tna-helpers.tcl
 
-tna::debug 2
+#tna::debug 2
 
 ::tcltest::test comment-1.0 { comment1 } -body {
     tna::array create a int 3 3

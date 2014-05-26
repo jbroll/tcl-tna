@@ -2,11 +2,11 @@
 #
 
 package require tcltest
-lappend auto_path ../lib
+lappend auto_path lib arec/lib
 
 package require tna
 
-source tna-helpers.tcl
+source test/tna-helpers.tcl
 
 ::tna::debug 0
 

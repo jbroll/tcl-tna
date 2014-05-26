@@ -1,9 +1,11 @@
+#!/usr/bin/env tclkit8.6
+#
 package require tcltest
-lappend auto_path ../lib
+lappend auto_path lib arec/lib
 
 package require tna
 
-source tna-helpers.tcl
+source test/tna-helpers.tcl
 
 
 foreach { types fmt } { { char uchar short ushort int uint long } %d { float double } %.1f } {
