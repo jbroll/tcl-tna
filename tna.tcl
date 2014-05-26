@@ -64,12 +64,12 @@ namespace eval tna {
 	void rprint(Register *r, int n) {
 	    int i;
 
-	    printf("%p data %p item %d type %d sizeof %d\n"
-		    , r
+	    printf("%s : data %p item %d type %d sizeof %d	: %p\n"
+		    , r->name
 		    , r->data.ptr
 		    , r->item
 		    , r->type
-		    , SizeOf[r->type]
+		    , SizeOf[r->type], r
 		);
 
 	    printf("	value int %d long %ld	%p %p\n", r->value._int, r->value._long, &r->value._int, &r->value._long);
@@ -292,12 +292,9 @@ namespace eval tna {
 	    switch ( regs[i].item ) {
 
 	     case TNA_ITEM_anox:
-	     case TNA_ITEM_anon: slice_reg(&regs[i], dataType);	 break;					// anon
+	     case TNA_ITEM_anon:  slice_reg(&regs[i], dataType);	 		  break;	// anon
+	     case TNA_ITEM_const: slice_val(&regs[i], dataType, (void *)&regs[i].value);  break;	// const
 	     case TNA_ITEM_vect:									// vect
-		if ( Tcl_GetLongFromObj( ip, regObjv[6], &data ) == TCL_ERROR ) {	
-		    //free(regs);
-		    return TCL_ERROR;
-		}
 
 		data = regs[i].value._int;
 
@@ -308,28 +305,25 @@ namespace eval tna {
 
 	     case TNA_ITEM_ivar:									// ivar
 	     case TNA_ITEM_ovar:									// ovar
-	     case TNA_ITEM_xvar:									// xvar
-	     case TNA_ITEM_const: {									// const
+	     case TNA_ITEM_xvar: {									// xvar
 		Tcl_Obj *tclValue;
 
-		if ( regs[i].item == TNA_ITEM_const ) {					
-		    tclValue = regObjv[6];
-		} else {
-		    regs[i].name = Tcl_GetStringFromObj(regObjv[6], NULL);
+		    Tcl_Obj *name = Tcl_NewStringObj(regs[i].name, -1);
 
-		    if ( !(tclValue = Tcl_ObjGetVar2(ip, regObjv[6], NULL, 0)) ) {
+		    if ( !(tclValue = Tcl_ObjGetVar2(ip, name, NULL, 0)) ) {
 			Tcl_Obj *error = Tcl_NewStringObj("can't read \"", -1);
-			Tcl_AppendObjToObj(error, regObjv[6]);
+			Tcl_AppendObjToObj(error, name);
 			Tcl_AppendObjToObj(error, Tcl_NewStringObj("\": no such variable", -1));
 			Tcl_SetObjResult(ip, error);
+
+			Tcl_DecrRefCount(name);
+
 			return TCL_ERROR;
 		    }
-		}
 
 		switch ( regs[i].item ) {
 		 case TNA_ITEM_ivar:									// ivar
 		 case TNA_ITEM_xvar:									// xvar
-		 case TNA_ITEM_const:									// const
 		    switch ( dataType ) {
 			[: { type ctype pType   pFmt    getType getFunc scan } $::tna::Types {
 
@@ -347,6 +341,9 @@ namespace eval tna {
 		    }
 		    break;
 		}
+
+		Tcl_DecrRefCount(name);
+
 		slice_val(&regs[i], dataType, (void *)&regs[i].value);
 		break;
 	     }
@@ -358,12 +355,7 @@ namespace eval tna {
 		    int       sObjc;
 		    Tcl_Obj **sObjv;
 
-		//regs[i].type = dataType;
-
-		if ( Tcl_GetLongFromObj( ip, regObjv[6], (long*) &regs[i].data.ptr ) == TCL_ERROR ) {
-		    //free(regs);
-		    return TCL_ERROR;
-		}
+		regs[i].data.ptr = (void *) regs[i].value._long;
 
 		/* Unpack the dims and slice data	*/
 

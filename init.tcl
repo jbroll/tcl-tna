@@ -12,6 +12,7 @@ namespace eval tna {
 
 	    set ::tna::TypesScan($i) $scan
 
+
 	    set TypesR($i)  $tnaType
 	}
 	set TypesR(101) zero

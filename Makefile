@@ -61,6 +61,8 @@ lib/nproc/Linux.x86_64/nproc.so : nproc.tcl
 register.unsourced : register.tcl register.h
 	unsource register.tcl > register.unsourced
 
+test: test.$(OS)
+
 test.Darwin: FORCE
 	#cd arec; $(MAKE) test
 	arch -i386   /usr/local/bin/tclsh8.6 ./tna-test.tcl 

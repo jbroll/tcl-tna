@@ -72,7 +72,7 @@ namespace eval tna {
 	    set drep [$name drep]
 	    set type [$name type]
 	    set dims [$name dims]
-		set data [$name data]
+	    set data [$name data]
 	    set flds _long
 
 	    if { $drep eq "bytes" } {
@@ -89,7 +89,7 @@ namespace eval tna {
 		set flds _int
 	    } else {
 		set name $name-$type
-		set flds _int
+		set flds _$::tna::TypesR($type)
 	    }
 	} elseif { [string is double $value] } {	# Double
 	    set item $::tna::TNA_ITEM_const
@@ -100,7 +100,7 @@ namespace eval tna {
 		set flds _double
 	    } else {
 		set name $name-$type
-		set flds _double
+		set flds _$::tna::TypesR($type)
 	    }
 	} elseif { $name in $::tna::Axes } {		# An axis letter.
 	    set item $::tna::TNA_ITEM_vect
@@ -111,7 +111,7 @@ namespace eval tna {
 	} else {
 	    if { $item ne {} } {
 		set item $item
-		set data $name
+		set data 0
 		set drep value
 		set type $tna::TNA_TYPE_double
 		set flds _double
@@ -126,9 +126,11 @@ namespace eval tna {
 	variable R
 	variable RI
 	set RI($name) $reg
-	$R set $reg type  $type item $item name $name drep [set ::tna::TNA_DREP_$drep] 
+	#puts "$R set $reg type  $type item $item name $name drep [set ::tna::TNA_DREP_$drep]"
+	$R set $reg type  $type item $item name $name drep [set ::tna::TNA_DREP_$drep]
 	$R set $reg value $flds $data
     }
+
     proc register-type { name } {
 	variable R
 	variable RI
@@ -184,9 +186,9 @@ namespace eval tna {
 	    lset regs(@$reg) $i [lindex $regs($name) $i]
 	}
 	$R setdict $reg [$R getdict $RI($name) type item drep]
+	$R set $reg value _long [$R get $RI($name) value _long]
 
 	lset regs(@$reg) end [$name indx $args]
-	#$R $reg axis setdict [lindex $regs(@$reg) end]
 
 	return @$reg
     }
@@ -231,7 +233,6 @@ namespace eval tna {
 
 	set RI($name) $reg 
 	$R set $reg type $tna::TNA_TYPE_double item $tna::TNA_ITEM_ivar name $name drep $::tna::TNA_DREP_value
-	$R set $reg value _string $name
 
 	return $name
     }
@@ -408,10 +409,10 @@ namespace eval tna {
 	exprStart
     }
 
-    variable R [tna::Register create ::tna::reg 0]
+    variable NRegs 0
 
     proc exprStart {} {
-	variable R
+	variable R [tna::Register create ::tna::reg[incr ::tna::NRegs] 0]
 
 	variable regs
 	variable       X {}
@@ -440,7 +441,8 @@ namespace eval tna {
 	set r [lsort -real -index 0 $r]
 
 	if { $text ne {} } {
-	    lappend Code [list $r $text [$R getbytes]  [$R length]]
+	    set bytes [$R getbytes]
+	    lappend Code [list $r $text $bytes  [$R length]]
 	}
 
 	exprStart
@@ -477,13 +479,14 @@ namespace eval tna {
 
 
 	foreach stmt $code {
-
-
-	    lassign $stmt a b c d 
-
-	    #puts "$d [format %x [bap $c]] [string length $c] $c"
 	    uplevel 1 [list ::tna::execute {*}$stmt]
 	}
+
+	while { $::tna::NRegs } {
+	    rename ::tna::reg$::tna::NRegs {}
+	    incr ::tna::NRegs -1
+	}
+
     }
     proc debug { x } { set ::tna::debug $x }
 

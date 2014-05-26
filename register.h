@@ -35,11 +35,11 @@ typedef struct _Data {
 } Data;
     
 typedef struct _Register {
+    char*	 name;
     char 	 type;		/* data type			*/
     Value	 value;
     char	 item;
     char	 used;
-    char*	 name;
     int		 drep;
     Data	 data;		/* pointer to data 		*/
     void*	 offs[NDIM+1];	/* Offset at this index level	*/
